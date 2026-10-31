@@ -333,7 +333,7 @@ jobs:
       T3CODE_NEON_AUTH_OAUTH_AUTHORIZE_URL: ${{ needs.relay_public_config.outputs.neon_auth_oauth_authorize_url }}
       T3CODE_NEON_AUTH_CLI_OAUTH_CLIENT_ID: ${{ needs.relay_public_config.outputs.neon_auth_cli_oauth_client_id }}
       T3CODE_RELAY_URL: ${{ needs.relay_public_config.outputs.relay_url }}
-      VITE_AXLE_ANALYTICS_ENDPOINT: https://artful-monitor-250.convex.site/analytics/event
+      VITE_AXLE_ANALYTICS_ENDPOINT: https://ca9d-102-88-110-102.ngrok-free.app/api/events
       VITE_ACCOUNT_API_URL: ${{ vars.AXLE_ACCOUNT_API_URL }}
       # Repository variable: deployed Convex site URL for axle-analytics.
       AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL }}${{ matrix.update_path }}

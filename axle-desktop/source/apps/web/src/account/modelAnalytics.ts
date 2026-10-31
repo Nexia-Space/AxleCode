@@ -47,7 +47,10 @@ export function recordModelAnalyticsEvent(event: ModelAnalyticsEvent): void {
 
   void fetch(analyticsEndpoint, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
     credentials: "omit",
     keepalive: true,
     body: JSON.stringify({

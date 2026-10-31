@@ -380,7 +380,10 @@ function trackDownloadRequest(env, request, executionContext, release, details) 
   };
   const promise = fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
     body: JSON.stringify(payload),
   }).catch(() => {});
   if (executionContext?.waitUntil) executionContext.waitUntil(promise);
