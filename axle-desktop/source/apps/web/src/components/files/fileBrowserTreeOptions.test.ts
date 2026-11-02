@@ -1,4 +1,9 @@
-import { FileTree, createFileTreeIconResolver, preloadFileTree } from "@pierre/trees";
+import {
+  FileTree,
+  createFileTreeIconResolver,
+  preloadFileTree,
+  type FileTreeDirectoryHandle,
+} from "@pierre/trees";
 import { describe, expect, it } from "vite-plus/test";
 
 import { FILE_BROWSER_TREE_OPTIONS } from "./fileBrowserTreeOptions";
@@ -14,7 +19,7 @@ const PATHS = [
 function directory(model: FileTree, path: string) {
   const item = model.getItem(path);
   if (!item?.isDirectory()) throw new Error(`Expected a directory at ${path}.`);
-  return item;
+  return item as FileTreeDirectoryHandle;
 }
 
 describe("workspace file tree defaults", () => {
