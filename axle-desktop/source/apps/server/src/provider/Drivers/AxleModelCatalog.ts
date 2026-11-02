@@ -1058,22 +1058,22 @@ async function loadAxleLocalModels(
 }
 
 const PROVIDERS: ReadonlyArray<ProviderDefinition> = [
-  // Axle's own provider. It is configured by the app, not by the user: the
-  // gateway, the model catalog, and the free daily credits are all part of the
-  // product, so it is present without an `AXLE_API_KEY` and an account key is
-  // only an override that ties the spend to the signed-in account.
+  // Axle keeps a status entry for the UI, but exposes no models until the
+  // user connects an account or another provider.
   {
     env: "AXLE_API_KEY",
     prefix: "axle",
     label: "Axle",
     load: (apiKey, fetchImplementation, environment, modelsDev) =>
-      loadOpenAICompatibleModels(
-        apiKey,
-        fetchImplementation,
-        providerBaseUrl(AXLE_HOSTED_BASE_URL, environment, "AXLE_BASE_URL"),
-        modelsDev,
-        "axle",
-      ),
+      apiKey.length === 0
+        ? Promise.resolve([])
+        : loadOpenAICompatibleModels(
+            apiKey,
+            fetchImplementation,
+            providerBaseUrl(AXLE_HOSTED_BASE_URL, environment, "AXLE_BASE_URL"),
+            modelsDev,
+            "axle",
+          ),
   },
   {
     env: "AXLE_LOCAL_API_KEY",
@@ -1213,9 +1213,9 @@ const PROVIDERS: ReadonlyArray<ProviderDefinition> = [
 /**
  * Whether a built-in provider can be probed with the current environment.
  *
- * Most providers exist only once the user supplies a credential. Axle's own
- * provider is the exception: it is part of the product, so it is always
- * available and the built-in credential stands in until an account key is set.
+ * Most providers exist only once the user supplies a credential. Axle keeps a
+ * status entry so the UI can explain how to connect it, but has no models until
+ * a credential is present.
  */
 function isProviderAvailable(
   provider: ProviderDefinition,
@@ -1253,7 +1253,7 @@ function providerCredential(
   if (configured) {
     return configured;
   }
-  return provider.prefix === "axle" ? AXLE_BUILT_IN_API_KEY : undefined;
+  return provider.prefix === "axle" ? (environment[provider.env]?.trim() ?? "") : undefined;
 }
 
 export async function discoverAxleModels(

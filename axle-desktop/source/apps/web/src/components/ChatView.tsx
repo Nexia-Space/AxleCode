@@ -231,6 +231,7 @@ import { type ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { NoActiveThreadState } from "./NoActiveThreadState";
 import { resolveEffectiveEnvMode } from "./BranchToolbar.logic";
 import { ProviderStatusBanner } from "./chat/ProviderStatusBanner";
+import { ProviderConnectionDialog } from "./chat/ProviderConnectionDialog";
 import { ThreadErrorBanner } from "./chat/ThreadErrorBanner";
 import { ComposerBannerStack, type ComposerBannerStackItem } from "./chat/ComposerBannerStack";
 import {
@@ -5569,6 +5570,13 @@ function ChatViewContent(props: ChatViewProps) {
 
         {/* Error banner */}
         <ProviderStatusBanner status={activeProviderStatus} />
+        <ProviderConnectionDialog
+          open={
+            isDraftHeroState &&
+            activeEnvironmentBootstrapComplete &&
+            providerStatuses.every((status) => !status.enabled || status.models.length === 0)
+          }
+        />
         <ThreadErrorBanner
           error={visibleThreadError}
           onDismiss={() => setThreadError(activeThread.id, null)}

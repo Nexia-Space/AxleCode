@@ -4,7 +4,7 @@ import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 
-import { AXLE_BUILT_IN_API_KEY, discoverAxleModels, loadCodexModels } from "./AxleModelCatalog.ts";
+import { discoverAxleModels, loadCodexModels } from "./AxleModelCatalog.ts";
 
 /** Where the built-in Axle provider probes, with no `<PREFIX>_BASE_URL` set. */
 const AXLE_GATEWAY_MODELS_URL = "https://axle-gateway.axle-download-worker.workers.dev/v1/models";
@@ -881,7 +881,7 @@ describe("discoverAxleModels", () => {
     expect(result.models.map((model) => model.slug)).toContain("openrouter/custom-model");
   });
 
-  it("always probes Axle's hosted gateway with the built-in credential", async () => {
+  it("does not probe Axle's hosted gateway before the user connects it", async () => {
     const requests: Array<{ readonly url: string; readonly authorization: string | null }> = [];
     const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
@@ -893,14 +893,11 @@ describe("discoverAxleModels", () => {
 
     const result = await discoverAxleModels({}, fetchImplementation);
 
-    // Axle's provider is configured by the app, so the gateway is probed even
-    // with no AXLE_API_KEY and no AXLE_BASE_URL in the environment.
+    // Keep the status entry, but do not expose a hosted model catalog on a new
+    // installation.
     const probe = requests.find((request) => request.url === AXLE_GATEWAY_MODELS_URL);
-    expect(probe?.authorization).toBe(`Bearer ${AXLE_BUILT_IN_API_KEY}`);
-    expect(result.models.map((model) => [model.slug, model.subProvider])).toContainEqual([
-      "axle/axle-20b",
-      "Axle",
-    ]);
+    expect(probe).toBeUndefined();
+    expect(result.models).toEqual([]);
   });
 
   it("prefers an Axle account key over the built-in credential", async () => {
