@@ -89,7 +89,9 @@ function writeSystemMessage(terminal: Terminal, message: string): void {
 function writeTerminalBuffer(terminal: Terminal, buffer: string): void {
   terminal.write("\u001bc");
   if (buffer.length > 0) {
-    terminal.write(buffer);
+    // xterm can become unresponsive when a high-volume process causes the
+    // bounded server history to be replayed in full on every update.
+    terminal.write(buffer.slice(-64_000));
   }
 }
 
@@ -390,7 +392,7 @@ export function TerminalViewport({
       cursorBlink: true,
       lineHeight: 1,
       fontSize: 12,
-      scrollback: 5_000,
+      scrollback: 2_000,
       fontFamily:
         '"SF Mono", "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace',
       theme: terminalThemeFromApp(mount),
