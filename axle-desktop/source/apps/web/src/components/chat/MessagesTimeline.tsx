@@ -1062,7 +1062,7 @@ function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "mess
 
   return (
     <>
-      <div className="relative min-w-0 px-1 py-0.5">
+      <div className="relative min-w-0 rounded-2xl px-3 py-2.5 transition-colors hover:bg-foreground/[0.025]">
         <ChatMarkdown
           text={displayedMessageText}
           cwd={ctx.markdownCwd}
