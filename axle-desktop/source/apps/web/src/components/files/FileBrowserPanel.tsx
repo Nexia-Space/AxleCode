@@ -14,8 +14,8 @@ import { writeTextToClipboard } from "~/hooks/useCopyToClipboard";
 import { useTheme } from "~/hooks/useTheme";
 import { cn } from "~/lib/utils";
 import { readLocalApi } from "~/localApi";
-import { T3_PIERRE_ICONS } from "~/pierre-icons";
 
+import { FILE_BROWSER_TREE_OPTIONS } from "./fileBrowserTreeOptions";
 import { createFileTreeDragMentionController } from "./fileTreeDragMention";
 import { useProjectEntriesQuery } from "./projectFilesQueryState";
 
@@ -25,18 +25,6 @@ interface FileBrowserPanelProps {
   projectName: string;
   onOpenFile: (relativePath: string) => void;
 }
-
-const TREE_UNSAFE_CSS = `
-  :host {
-    --trees-bg-override: transparent;
-    --trees-selected-bg-override: color-mix(in srgb, currentColor 12%, transparent);
-    --trees-hover-bg-override: color-mix(in srgb, currentColor 7%, transparent);
-    --trees-border-color-override: color-mix(in srgb, currentColor 14%, transparent);
-    --trees-font-family-override: var(--font-sans);
-    --trees-font-size-override: 12px;
-  }
-  button[data-type='item'] { border-radius: 5px; }
-`;
 
 function treePath(entry: ProjectEntry): string {
   return entry.kind === "directory" ? `${entry.path}/` : entry.path;
@@ -158,11 +146,7 @@ export default function FileBrowserPanel({
     // Rows only need to be draggable so entries can be dropped into the chat
     // composer; rearranging files inside the tree stays off.
     dragAndDrop: { canDrop: () => false },
-    density: "compact",
-    fileTreeSearchMode: "hide-non-matches",
-    flattenEmptyDirectories: true,
-    initialExpansion: 1,
-    icons: T3_PIERRE_ICONS,
+    ...FILE_BROWSER_TREE_OPTIONS,
     onSelectionChange: (selectedPaths) => {
       dragMention.handleSelectionChange(selectedPaths);
       // Starting a drag selects the dragged row; that selection is a side
@@ -177,7 +161,6 @@ export default function FileBrowserPanel({
     },
     paths: [],
     search: true,
-    unsafeCSS: TREE_UNSAFE_CSS,
   });
 
   useEffect(() => {
