@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SignInButton, UserButton, useClerk, useUser } from "@clerk/nextjs";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
-  type FormEvent,
   type ReactNode,
 } from "react";
 
@@ -72,6 +72,7 @@ async function loadDashboard(): Promise<State> {
 export function Shell({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const pathname = usePathname();
+  const { isSignedIn } = useUser();
 
   const refresh = useCallback(() => {
     setState({ status: "loading" });
@@ -88,6 +89,10 @@ export function Shell({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (isSignedIn && state.status === "signed-out") refresh();
+  }, [isSignedIn, refresh, state.status]);
+
   // Keep the dashboard live without a manual reload. Failures are ignored so a
   // transient blip never wipes good data off the screen.
   useEffect(() => {
@@ -100,9 +105,11 @@ export function Shell({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [state.status]);
 
-  const signOut = useCallback(() => {
-    void fetch("/api/session", { method: "DELETE" }).then(() => setState({ status: "signed-out" }));
-  }, []);
+  const { signOut } = useClerk();
+
+  const handleSignOut = useCallback(() => {
+    void signOut().then(() => setState({ status: "signed-out" }));
+  }, [signOut]);
 
   if (state.status !== "ready") {
     return (
@@ -113,7 +120,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="card center-card">
             <h2>Dashboard not configured</h2>
             <p className="muted small">{state.message}</p>
-            <pre>{`ANALYTICS_DASHBOARD_TOKEN=<your secret>
+            <pre>{`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_…
+CLERK_SECRET_KEY=sk_…
 MONGODB_URI=mongodb://…/axle`}</pre>
           </div>
         ) : null}
@@ -159,9 +167,8 @@ MONGODB_URI=mongodb://…/axle`}</pre>
             <button type="button" className="ghost" onClick={refresh}>
               Refresh
             </button>
-            <button type="button" className="ghost" onClick={signOut}>
-              Sign out
-            </button>
+            <UserButton />
+            <button type="button" className="ghost" onClick={handleSignOut}>Sign out</button>
           </div>
         </aside>
 
@@ -172,58 +179,15 @@ MONGODB_URI=mongodb://…/axle`}</pre>
 }
 
 function LoginCard({ onSignedIn }: { onSignedIn: () => void }) {
-  const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/session", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-      if (response.ok) {
-        setToken("");
-        onSignedIn();
-        return;
-      }
-      const body: unknown = await response.json().catch(() => null);
-      setError(
-        body !== null && typeof body === "object" && "error" in body
-          ? String((body as { error: unknown }).error)
-          : "Sign in failed.",
-      );
-    } catch {
-      setError("Could not reach the dashboard API.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="card center-card">
       <h2>Admin access</h2>
       <p className="muted small">
-        Enter the dashboard token configured on the server to view analytics.
+        Sign in with Google using <strong>fawassaka862@gmail.com</strong>.
       </p>
-      <form onSubmit={submit} className="login">
-        <input
-          type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-          placeholder="Dashboard token"
-          autoComplete="current-password"
-          required
-        />
-        <button type="submit" disabled={busy || token.trim().length === 0}>
-          {busy ? "Checking…" : "Unlock"}
-        </button>
-      </form>
-      {error !== null ? <p className="warn small">{error}</p> : null}
+      <SignInButton mode="modal" forceRedirectUrl="/">
+        <button type="button" onClick={onSignedIn}>Continue with Google</button>
+      </SignInButton>
     </div>
   );
 }

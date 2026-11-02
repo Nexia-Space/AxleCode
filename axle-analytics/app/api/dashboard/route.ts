@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { ADMIN_COOKIE, readAdminToken, timingSafeEqual } from "@/lib/auth";
+import { ADMIN_EMAIL, readAdminIdentity } from "@/lib/auth";
 import { loadBachsRevenue } from "@/lib/bachs";
 import { loadClerkRoster } from "@/lib/clerk";
 import { buildDashboard, getDb } from "@/lib/db";
@@ -27,17 +26,12 @@ function resolveUserName(
 }
 
 export async function GET() {
-  const expected = readAdminToken();
-  if (!expected) {
+  const identity = await readAdminIdentity();
+  if (identity.userId === null) {
     return NextResponse.json(
-      { error: "Server is not configured. Set ANALYTICS_DASHBOARD_TOKEN." },
-      { status: 503 },
+      { error: `Sign in with Google using ${ADMIN_EMAIL}.` },
+      { status: 401 },
     );
-  }
-
-  const token = (await cookies()).get(ADMIN_COOKIE)?.value ?? "";
-  if (!token || !timingSafeEqual(token, expected)) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
   let account;
