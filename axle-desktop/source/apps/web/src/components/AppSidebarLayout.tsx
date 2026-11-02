@@ -36,6 +36,13 @@ function resolveOpenSidebarFootprint(): number {
   return container?.getBoundingClientRect().width ?? 0;
 }
 
+function isInsideSidebarTitlebar(clientY: number): boolean {
+  const control = document.querySelector<HTMLElement>("[data-sidebar-control]");
+  if (!control) return false;
+  const { top, bottom } = control.getBoundingClientRect();
+  return clientY >= top && clientY < bottom;
+}
+
 function isInsideSidebarChrome(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
@@ -141,6 +148,7 @@ function SidebarEdgeReveal() {
     const onPointerMove = (event: PointerEvent) => {
       const action = resolveSidebarEdgePointerAction({
         clientX: event.clientX,
+        insideTitlebar: isInsideSidebarTitlebar(event.clientY),
         open,
         revealedByHover: revealedByHoverRef.current,
         sidebarWidth: resolveOpenSidebarFootprint(),
@@ -162,12 +170,14 @@ function SidebarEdgeReveal() {
         button: event.button,
         clientX: event.clientX,
         insideSidebarChrome: isInsideSidebarChrome(event.target),
+        insideTitlebar: isInsideSidebarTitlebar(event.clientY),
         open,
         revealedByHover: revealedByHoverRef.current,
       });
       if (action === "ignore") {
         return;
       }
+      clearCloseTimer();
       revealedByHoverRef.current = false;
       if (action === "open") {
         setOpen(true);
