@@ -561,7 +561,7 @@ pre {
 }
 
 .auth-form {
-  width: 100%;
+  width: min(100%, 280px);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -569,7 +569,7 @@ pre {
 
 .auth-form input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: var(--card-2);
   border: 1px solid var(--input);
   border-radius: 7px;
@@ -585,7 +585,7 @@ pre {
 
 .auth-form button {
   width: 100%;
-  padding: 10px 16px;
+  padding: 8px 14px;
   font-size: 13px;
   border-radius: 7px;
 }
