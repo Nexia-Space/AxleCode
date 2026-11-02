@@ -41,7 +41,7 @@ export default function UsersPage() {
         </div>
         <BarChart
           data={users.slice(0, 12).map((user) => ({
-            label: user.displayName ?? shortId(user.userId),
+            label: user.displayName ?? "Unnamed account",
             value: user.requests,
           }))}
           tone="b"
@@ -74,7 +74,7 @@ export default function UsersPage() {
                 <tr key={user.userId}>
                   <td>
                     <div className="stack" style={{ gap: 0 }}>
-                      <span>{user.displayName ?? "Account identity unavailable"}</span>
+                      <span>{user.displayName ?? "Unnamed account"}</span>
                       <span className="muted small">{shortId(user.userId)}</span>
                     </div>
                   </td>

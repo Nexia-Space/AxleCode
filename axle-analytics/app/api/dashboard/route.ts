@@ -8,6 +8,24 @@ import { buildDashboard, getDb } from "@/lib/db";
 import { loadDownloadBreakdown } from "@/lib/github";
 import { loadAccountMetrics, loadProviderBreakdown, loadUserBreakdown } from "@/lib/mongo";
 
+function fallbackUserName(userId: string): string {
+  if (userId === "test-user") return "Test user";
+  if (userId === "probe-user") return "Probe user";
+  return "Unnamed account";
+}
+
+function resolveUserName(
+  userId: string,
+  databaseName: string | null | undefined,
+  rosterName: string | null | undefined,
+): string {
+  const databaseLabel = databaseName?.trim();
+  if (databaseLabel) return databaseLabel;
+  const rosterLabel = rosterName?.trim();
+  if (rosterLabel) return rosterLabel;
+  return fallbackUserName(userId);
+}
+
 export async function GET() {
   const expected = readAdminToken();
   if (!expected) {
@@ -63,7 +81,7 @@ export async function GET() {
 
   const usersWithNames = users.map((user) => ({
     ...user,
-    displayName: user.displayName ?? rosterNameById.get(user.userId) ?? null,
+    displayName: resolveUserName(user.userId, user.displayName, rosterNameById.get(user.userId)),
   }));
 
   // Anyone Clerk knows about who has never touched account-api still belongs here.
@@ -72,7 +90,7 @@ export async function GET() {
     if (knownUserIds.has(entry.id)) continue;
     usersWithNames.push({
       userId: entry.id,
-      displayName: entry.name ?? entry.email,
+      displayName: resolveUserName(entry.id, entry.name, entry.email),
       plan: null,
       requests: 0,
       totalTokens: 0,
@@ -104,7 +122,7 @@ export async function GET() {
     ...entry,
     users: entry.users.map((user) => ({
       ...user,
-      displayName: user.displayName ?? rosterNameById.get(user.userId) ?? null,
+      displayName: resolveUserName(user.userId, user.displayName, rosterNameById.get(user.userId)),
     })),
   }));
 
