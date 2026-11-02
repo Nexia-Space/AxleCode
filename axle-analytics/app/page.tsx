@@ -1,6 +1,7 @@
 "use client";
 
 import { BarChart } from "@/components/BarChart";
+import { LineChart } from "@/components/LineChart";
 import { providerInfo } from "@/lib/providers";
 
 import { compactFmt, currencyFmt, numberFmt } from "./format";
@@ -12,6 +13,7 @@ export default function OverviewPage() {
   const { account, providers, downloads, github } = data;
   const bachs = data.bachs ?? EMPTY_BACHS;
   const { users, requests, revenue } = account;
+  const connectedSources = data.sources.filter((source) => source.status === "connected").length;
   const usdCollected = bachs.byCurrency.find((row) => row.currency === "USD");
   const collected = usdCollected
     ? currencyFmt(usdCollected.collected, "USD")
@@ -48,7 +50,7 @@ export default function OverviewPage() {
     { label: "Collected", value: collected, hint: "Bachs, completed" },
     { label: "Providers", value: numberFmt.format(providers.length), hint: "in use" },
     {
-      label: "Downloads",
+      label: "Installer downloads",
       value: numberFmt.format(github?.total ?? downloads.requests),
       hint:
         github?.reachable === true
@@ -63,11 +65,10 @@ export default function OverviewPage() {
         <div>
           <h1>Overview</h1>
           <p className="page-sub">
-            {requests.from && requests.to
-              ? `${requests.from} → ${requests.to} · ${requests.perDay.length} active days`
-              : "No usage recorded yet"}
+            Last 30 days of account usage · all-time totals are labelled separately
           </p>
         </div>
+        <span className="status-dot"><i /> {connectedSources}/{data.sources.length} sources connected</span>
       </div>
 
       <section className="section kpis">
@@ -80,10 +81,54 @@ export default function OverviewPage() {
         ))}
       </section>
 
+      <section className="section source-strip" aria-label="Data source status">
+        {data.sources.map((source) => (
+          <div className="source-item" key={source.key}>
+            <span className={`source-state ${source.status}`} />
+            <span>{source.label}</span>
+            <span className="muted small">{source.status === "connected" ? "Connected" : source.detail}</span>
+          </div>
+        ))}
+      </section>
+
+      <section className="section grid-2 chart-grid">
+        <div className="card chart-card">
+          <div className="card-head">
+            <div>
+              <h2>Requests over time</h2>
+              <span className="muted small">Account usage events · UTC</span>
+            </div>
+            <span className="metric-badge blue">30 days</span>
+          </div>
+          <LineChart
+            data={requests.perDay.map((day) => ({ label: day.date, value: day.turns }))}
+            tone="a"
+            valueLabel="requests"
+          />
+        </div>
+        <div className="card chart-card">
+          <div className="card-head">
+            <div>
+              <h2>Active accounts</h2>
+              <span className="muted small">Accounts with usage each day</span>
+            </div>
+            <span className="metric-badge green">daily</span>
+          </div>
+          <LineChart
+            data={requests.perDay.map((day) => ({ label: day.date, value: day.activeUsers }))}
+            tone="b"
+            valueLabel="active accounts"
+          />
+        </div>
+      </section>
+
       <section className="section card">
         <div className="card-head">
-          <h2>Requests per day</h2>
-          <span className="muted small">axle_account_usage_daily</span>
+          <div>
+            <h2>Requests per day</h2>
+            <span className="muted small">Exact daily account-api rollup · axle_account_usage_daily</span>
+          </div>
+          <span className="metric-badge blue">{numberFmt.format(requests.total)} all-time</span>
         </div>
         <BarChart
           data={requests.perDay.map((day) => ({ label: day.date, value: day.turns }))}
@@ -154,36 +199,24 @@ export default function OverviewPage() {
 
       <section className="section card">
         <div className="card-head">
-          <h2>Downloads by platform</h2>
-          <span className="muted small">GitHub release assets</span>
+          <div>
+            <h2>Downloads by release</h2>
+            <span className="muted small">GitHub installer assets · not unique users</span>
+          </div>
+          <span className="metric-badge purple">lifetime</span>
         </div>
         {!github?.reachable ? (
           <p className="muted small">
             {github?.error ?? "GitHub download counts unavailable."}
           </p>
-        ) : github.byPlatform.length === 0 ? (
+        ) : github.byRelease.length === 0 ? (
           <p className="muted small">No installer assets have been downloaded yet.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Platform</th>
-                <th className="num">Downloads</th>
-                <th>Share</th>
-              </tr>
-            </thead>
-            <tbody>
-              {github.byPlatform.map((row) => (
-                <tr key={row.platform}>
-                  <td>{row.platform}</td>
-                  <td className="num">{numberFmt.format(row.downloads)}</td>
-                  <td className="muted small">
-                    {github.total > 0 ? Math.round((row.downloads / github.total) * 100) : 0}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <LineChart
+            data={github.byRelease.slice().reverse().map((row) => ({ label: row.tag, value: row.downloads }))}
+            tone="b"
+            valueLabel="downloads"
+          />
         )}
       </section>
     </>

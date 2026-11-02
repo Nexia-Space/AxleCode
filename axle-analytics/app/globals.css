@@ -171,6 +171,61 @@ h2 {
   font-size: 12.5px;
 }
 
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.status-dot i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-b);
+  box-shadow: 0 0 0 4px rgb(94 207 163 / 10%);
+}
+
+.source-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+}
+
+.source-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--card);
+  font-size: 11px;
+}
+
+.source-item .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-state {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.source-state.connected { background: var(--accent-b); }
+.source-state.degraded { background: #e4b86a; }
+.source-state.missing { background: var(--destructive); }
+
 .section {
   margin-bottom: 18px;
 }
@@ -246,6 +301,38 @@ code {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
   gap: 10px;
+}
+
+.chart-grid {
+  align-items: stretch;
+}
+
+.chart-card {
+  min-width: 0;
+  padding-bottom: 10px;
+}
+
+.metric-badge {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.metric-badge.blue {
+  color: #b7ccff;
+  background: rgb(122 162 247 / 13%);
+}
+
+.metric-badge.green {
+  color: #a9f0cf;
+  background: rgb(94 207 163 / 13%);
+}
+
+.metric-badge.purple {
+  color: #d8c4ff;
+  background: rgb(169 130 255 / 13%);
 }
 
 /* ---------- tables ---------- */
@@ -424,10 +511,18 @@ pre {
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .source-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
   .kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .source-strip {
     grid-template-columns: minmax(0, 1fr);
   }
 }

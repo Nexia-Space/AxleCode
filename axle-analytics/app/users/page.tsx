@@ -74,7 +74,7 @@ export default function UsersPage() {
                 <tr key={user.userId}>
                   <td>
                     <div className="stack" style={{ gap: 0 }}>
-                      <span>{user.displayName ?? "Unnamed"}</span>
+                      <span>{user.displayName ?? "Account identity unavailable"}</span>
                       <span className="muted small">{shortId(user.userId)}</span>
                     </div>
                   </td>
