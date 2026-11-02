@@ -107,14 +107,14 @@ export async function GET() {
 
   const namedUsers = usersWithNames;
 
-  // `users.total` comes from the profile count; the roster is the real answer.
+  // Mongo credit accounts are the source of truth for the account count. Clerk
+  // is only an optional identity enrichment source and may be a different or
+  // empty instance during migrations.
   const accountWithRoster = {
     ...account,
-    // Only replace the Mongo account count when the Clerk roster completed.
-    // A partial Clerk response must never make the dashboard undercount users.
     users: {
       ...account.users,
-      total: roster.configured && roster.error === null ? namedUsers.length : account.users.total,
+      total: account.users.total,
     },
   };
 
