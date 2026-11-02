@@ -154,7 +154,9 @@ export interface AxleAssistantSegmentCallbacks {
 // Axle process attempt. This is deliberately an inactivity timeout, not a
 // total-turn timeout: slow networks and long tool calls are allowed to make
 // progress without being killed merely because the turn is old.
-export const AXLE_TURN_IDLE_TIMEOUT_MS = Duration.toMillis(Duration.minutes(10));
+// Slow connected providers may take several minutes before producing output.
+// Keep the turn alive; explicit user interruption remains the stop control.
+export const AXLE_TURN_IDLE_TIMEOUT_MS = Duration.toMillis(Duration.minutes(30));
 function sanitizeAxleLogDetail(value: string): string {
   return value
     .replace(
