@@ -28,6 +28,20 @@ describe("sidebar edge reveal", () => {
     ).toBe("reveal");
   });
 
+  it("does not reveal a collapsed sidebar while approaching the titlebar toggle", () => {
+    for (const clientX of [0, SIDEBAR_EDGE_REVEAL_ZONE_WIDTH, 26]) {
+      expect(
+        resolveSidebarEdgePointerAction({
+          clientX,
+          insideTitlebar: true,
+          open: false,
+          revealedByHover: false,
+          sidebarWidth: SIDEBAR_WIDTH,
+        }),
+      ).toBe("ignore");
+    }
+  });
+
   it("leaves a collapsed sidebar alone elsewhere", () => {
     expect(
       resolveSidebarEdgePointerAction({
@@ -100,6 +114,19 @@ describe("sidebar edge press", () => {
         revealedByHover: false,
       }),
     ).toBe("open");
+  });
+
+  it("leaves collapsed titlebar presses to the toggle instead of opening twice", () => {
+    expect(
+      resolveSidebarEdgePress({
+        button: 0,
+        clientX: 4,
+        insideSidebarChrome: true,
+        insideTitlebar: true,
+        open: false,
+        revealedByHover: false,
+      }),
+    ).toBe("ignore");
   });
 
   it("ignores presses away from the collapsed edge", () => {
