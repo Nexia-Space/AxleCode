@@ -15,8 +15,8 @@ interface BarChartProps {
 }
 
 const TONES = {
-  a: { from: "#8fb4ff", to: "#5b7fd8" },
-  b: { from: "#7ee0b8", to: "#3fa982" },
+  a: { from: "#ffffff", to: "#cfcfcf" },
+  b: { from: "#ffffff", to: "#cfcfcf" },
 } as const;
 
 /** Round the axis up to a readable value (1, 2, 5 × 10^n). */
