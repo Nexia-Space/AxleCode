@@ -38,7 +38,6 @@ export const PLAN_DISPLAY: Record<PlanTier, PlanDisplay> = {
     highlights: [
       "Local projects, terminal, and Git tools",
       "Bring your own model keys or local models",
-      "Google Gemma 4, Meta Muse Glimmer, and Nemotron 3.5 Lightning",
       "100 Axle credits every day",
       "Up to 2 scheduled tasks",
     ],
@@ -51,7 +50,6 @@ export const PLAN_DISPLAY: Record<PlanTier, PlanDisplay> = {
     tagline: "For individual work that should not wait.",
     highlights: [
       "Everything in Free",
-      "GLM 5.3, GLM 5.3 Flash, and Nemotron 3 Super",
       "2,000 Axle credits every month",
       "Axle Offline Compact and Standard packs",
       "Up to 50 scheduled tasks",
@@ -70,7 +68,7 @@ export const PLAN_DISPLAY: Record<PlanTier, PlanDisplay> = {
       "Axle Offline Advanced and Coder packs",
       "4,000 Axle credits every month",
       "Up to 100 scheduled tasks",
-      "More concurrent cloud jobs",
+      "More concurrent cloud schedules",
     ],
   },
   ultra: {
@@ -84,7 +82,7 @@ export const PLAN_DISPLAY: Record<PlanTier, PlanDisplay> = {
       "Axle Offline Max and Vision packs",
       "10,000 Axle credits every month",
       "Up to 200 scheduled tasks",
-      "The highest cloud-job concurrency",
+      "The highest cloud-schedule concurrency",
     ],
   },
 };
