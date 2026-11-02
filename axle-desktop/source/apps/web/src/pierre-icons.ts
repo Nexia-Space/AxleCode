@@ -13,6 +13,12 @@ const PIERRE_ICON_SPRITE_ID = "t3code-pierre-file-icon-sprite";
 
 const T3_FILE_ICON_SPRITE = `
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true">
+  <symbol id="t3-file-icon-folder" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path style="display: var(--t3-folder-closed-display, none)" d="M20 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z" />
+      <path style="display: var(--t3-folder-open-display, inline)" d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6A2 2 0 0 1 18.45 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v2" />
+    </g>
+  </symbol>
   <symbol id="t3-file-icon-package-json" viewBox="0 0 32 32">
     <path d="M2 2H30V30H2" fill="#c12127" />
     <path d="M7.25 7.25h17.5v17.5h-3.5v-14H16v14H7.25" fill="#fff" />
@@ -41,6 +47,9 @@ export const T3_PIERRE_ICONS = {
   set: "complete",
   colored: true,
   spriteSheet: T3_FILE_ICON_SPRITE,
+  remap: {
+    "file-tree-icon-chevron": { name: "t3-file-icon-folder", viewBox: "0 0 24 24" },
+  },
   byFileName: {
     "package.json": "t3-file-icon-package-json",
     "tsconfig.json": "t3-file-icon-tsconfig",
