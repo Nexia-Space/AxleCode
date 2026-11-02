@@ -77,6 +77,8 @@ export async function loadDownloadBreakdown(): Promise<DownloadBreakdown> {
       error:
         response.status === 403 || response.status === 429
           ? "GitHub rate limit reached. Set GITHUB_TOKEN to raise it."
+          : response.status === 404
+            ? "GitHub releases are private or GITHUB_TOKEN is missing."
           : `GitHub API responded with ${response.status}.`,
     };
   }

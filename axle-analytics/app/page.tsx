@@ -24,6 +24,11 @@ export default function OverviewPage() {
   const today = data.today ?? new Date().toISOString().slice(0, 10);
   const todayRow = requests.perDay.find((day) => day.date === today);
   const topProviders = [...providers].sort((a, b) => b.totalTokens - a.totalTokens);
+  const installerDownloads = github?.reachable
+    ? numberFmt.format(github.total)
+    : downloads.requests > 0
+      ? numberFmt.format(downloads.requests)
+      : "—";
 
   const kpis = [
     { label: "Users", value: numberFmt.format(users.total), hint: "accounts" },
@@ -51,11 +56,11 @@ export default function OverviewPage() {
     { label: "Providers", value: numberFmt.format(providers.length), hint: "in use" },
     {
       label: "Installer downloads",
-      value: numberFmt.format(github?.total ?? downloads.requests),
+      value: installerDownloads,
       hint:
         github?.reachable === true
           ? `GitHub releases · latest ${github.latestTag ?? "—"}`
-          : `${numberFmt.format(downloads.clicks)} clicks · ${numberFmt.format(downloads.errors)} errors`,
+          : github?.error ?? "GitHub release data unavailable",
     },
   ];
 

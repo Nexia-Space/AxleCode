@@ -104,9 +104,9 @@ export interface AccountMetrics {
 export async function loadAccountMetrics(): Promise<AccountMetrics> {
   const db = await getDb();
 
-  const [userTotal, planRows, subscriptionRows, usageRows, dailyRows, providerRows, billingEvents, ledgerEntries] =
+  const [accountTotal, planRows, subscriptionRows, usageRows, dailyRows, providerRows, billingEvents, ledgerEntries] =
     await Promise.all([
-      db.collection("axle_account_profiles").countDocuments(),
+      db.collection("axle_credit_accounts").countDocuments(),
       db
         .collection("axle_credit_accounts")
         .aggregate([{ $group: { _id: "$planId", count: { $sum: 1 } } }])
@@ -220,7 +220,7 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
 
   return {
     users: {
-      total: userTotal,
+      total: accountTotal,
       pro: Math.max(proFromPlans, subscriptionRows.length),
       byPlan,
     },
@@ -289,7 +289,7 @@ function iso(value: unknown): string | null {
 export async function loadUserBreakdown(): Promise<UserRow[]> {
   const db = await getDb();
 
-  const [usageRows, profiles, accounts, topModels, sessionUsers, deviceUsers] = await Promise.all([
+  const [usageRows, profiles, accounts, topModels] = await Promise.all([
     db
       .collection("axle_account_usage_events")
       .aggregate([
@@ -322,20 +322,17 @@ export async function loadUserBreakdown(): Promise<UserRow[]> {
         { $group: { _id: "$userId", model: { $first: "$model" } } },
       ])
       .toArray(),
-    db.collection("axle_account_sessions").distinct("userId"),
-    db.collection("axle_account_devices").distinct("userId"),
   ]);
 
   const nameById = new Map(profiles.map((row) => [String(row._id), String(row.displayName ?? "")]));
   const planById = new Map(accounts.map((row) => [String(row._id), String(row.planId ?? "")]));
   const modelById = new Map(topModels.map((row) => [String(row._id), String(row.model ?? "")]));
 
-  // Every identity with real activity. Credit-account rows alone are not enough:
-  // the collection also carries test fixtures (`test-user`, `probe-user`) and a
-  // legacy id, which would otherwise show up as nameless "users".
+  // Credit accounts are the account source of truth. Add usage/session/profile
+  // identities too so operational activity is still visible when an account
+  // record was not fully hydrated by account-api.
   const identityIds = new Set<string>();
-  for (const id of sessionUsers) identityIds.add(String(id));
-  for (const id of deviceUsers) identityIds.add(String(id));
+  for (const row of accounts) identityIds.add(String(row._id));
   for (const row of usageRows) identityIds.add(String(row._id));
   // A profile is an account even when the user has never set a display name.
   // Enrichment is separate from identity discovery; filtering null names here
