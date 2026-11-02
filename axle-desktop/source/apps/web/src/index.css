@@ -138,8 +138,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
      (~20% of the cycle) instead of every vsync. Keep flat holds dominant. */
   --animate-status-pulse: status-pulse 2s infinite;
   --animate-status-ping: status-ping 2s infinite;
-  --font-sans:
-    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-heading: var(--font-sans);
   --font-mono:
     "SF Mono", "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", Menlo, monospace;
@@ -316,13 +315,17 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
   .chat-composer-glass {
     background: var(--composer-background);
     box-shadow: var(--composer-shadow);
+    border-color: transparent !important;
     transition:
       border-color 160ms ease,
       box-shadow 160ms ease;
   }
 
   .chat-composer-glass:focus-within {
-    border-color: var(--composer-focus-border);
+    border-color: transparent !important;
+    box-shadow:
+      0 14px 36px rgb(0 0 0 / 40%),
+      0 0 0 1px color-mix(in srgb, var(--composer-focus-border) 42%, transparent);
   }
 
   .chat-composer-lower-chrome {
@@ -436,17 +439,17 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
   @variant dark {
     color-scheme: dark;
-    --background: #1a1a1a;
-    --app-chrome-background: #141414;
+    --background: #0d0d0f;
+    --app-chrome-background: #09090b;
     --foreground: #ececec;
-    --card: #222222;
-    --composer-background: #303030;
-    --composer-context-background: #242424;
-    --composer-focus-border: #555555;
-    --composer-shadow: 0 6px 28px rgb(0 0 0 / 10%);
+    --card: #151519;
+    --composer-background: #18181c;
+    --composer-context-background: #111115;
+    --composer-focus-border: #686875;
+    --composer-shadow: 0 12px 32px rgb(0 0 0 / 34%);
     --floating-shadow: 0 14px 44px rgb(0 0 0 / 32%);
     --card-foreground: var(--foreground);
-    --popover: #282828;
+    --popover: #17171b;
     --popover-foreground: var(--foreground);
     --primary: #ececec;
     --primary-foreground: #1a1a1a;
@@ -457,8 +460,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --accent: --alpha(var(--color-white) / 6%);
     --accent-foreground: var(--color-neutral-100);
     --destructive: #ed7777;
-    --border: #2c2c2c;
-    --input: #3d3d3d;
+    --border: #25252b;
+    --input: #303038;
     --ring: #b5b5b5;
     --destructive-foreground: #f08a8a;
     --info: #7c9ec9;

@@ -2018,7 +2018,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     <form
       ref={composerFormRef}
       onSubmit={submitComposer}
-      className="mx-auto w-full min-w-0 max-w-[56rem]"
+      className="mx-auto w-full min-w-0 max-w-[46rem]"
       data-chat-composer-form="true"
     >
       <div
@@ -2039,7 +2039,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           ref={composerSurfaceRef}
           data-chat-composer-mobile-collapsed={isComposerCollapsedMobile ? "true" : "false"}
           className={cn(
-            "chat-composer-glass rounded-[24px] border transition-[border-color,box-shadow] duration-150 outline-none focus-within:border-ring/45",
+            "chat-composer-glass rounded-[20px] border border-transparent transition-[border-color,box-shadow] duration-150 outline-none",
             isDragOverComposer ? "border-primary/70 bg-accent/45" : "border-foreground/[0.07]",
             projectSelectionRequired ? "opacity-75" : null,
             composerProviderState.composerSurfaceClassName,
