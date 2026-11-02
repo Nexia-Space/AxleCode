@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { ADMIN_EMAIL, readAdminIdentity } from "@/lib/auth";
+import { ADMIN_COOKIE, isValidAdminSession } from "@/lib/auth";
 import { loadBachsRevenue } from "@/lib/bachs";
 import { loadClerkRoster } from "@/lib/clerk";
 import { buildDashboard, getDb } from "@/lib/db";
@@ -26,13 +26,9 @@ function resolveUserName(
 }
 
 export async function GET() {
-  const identity = await readAdminIdentity();
-  if (identity.userId === null) {
-    return NextResponse.json(
-      { error: `Sign in with Google using ${ADMIN_EMAIL}.` },
-      { status: 401 },
-    );
-  }
+  const { cookies } = await import("next/headers");
+  const session = (await cookies()).get(ADMIN_COOKIE)?.value ?? "";
+  if (!isValidAdminSession(session)) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
   let account;
   let users;

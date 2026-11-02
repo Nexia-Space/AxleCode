@@ -560,27 +560,34 @@ pre {
   font-size: 12.5px;
 }
 
-.google-sign-in {
+.auth-form {
   width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
   gap: 9px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card-2);
+  border: 1px solid var(--input);
+  border-radius: 7px;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+}
+
+.auth-form input:focus {
+  outline: 2px solid #555;
+  outline-offset: 1px;
+}
+
+.auth-form button {
+  width: 100%;
   padding: 10px 16px;
-  background: var(--fg);
-  color: #181818;
   font-size: 13px;
   border-radius: 7px;
-}
-
-.google-sign-in:hover {
-  background: #fff;
-}
-
-.google-mark {
-  font-weight: 700;
-  font-size: 15px;
-  color: #4285f4;
 }
 
 .auth-note {

@@ -1,26 +1,36 @@
+import { createHmac, timingSafeEqual as cryptoTimingSafeEqual } from "node:crypto";
+
 export const ADMIN_COOKIE = "axle_admin";
 
-export const ADMIN_EMAIL = "fawassaka862@gmail.com";
-
-export function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let index = 0; index < a.length; index += 1) {
-    diff |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  }
-  return diff === 0;
+function credentials(): { username: string; passcode: string } {
+  return {
+    username: process.env.ANALYTICS_ADMIN_USERNAME?.trim() || "axleadmin",
+    passcode: process.env.ANALYTICS_ADMIN_PASSCODE?.trim() || "",
+  };
 }
 
-export async function readAdminIdentity(): Promise<
-  { userId: string; email: string } | { userId: null; email: null }
-> {
-  const { auth, currentUser } = await import("@clerk/nextjs/server");
-  const { userId } = await auth();
-  if (!userId) return { userId: null, email: null };
+function sessionToken(username: string, passcode: string): string {
+  return createHmac("sha256", passcode).update(username).digest("hex");
+}
 
-  const user = await currentUser();
-  const email = user?.emailAddresses
-    .map((entry) => entry.emailAddress.trim().toLowerCase())
-    .find((entry) => entry === ADMIN_EMAIL);
-  return email ? { userId, email } : { userId: null, email: null };
+export function authenticateAdmin(username: string, passcode: string): boolean {
+  const expected = credentials();
+  return timingSafeEqual(username.trim(), expected.username) && timingSafeEqual(passcode, expected.passcode);
+}
+
+export function createAdminSession(): string {
+  const expected = credentials();
+  return sessionToken(expected.username, expected.passcode);
+}
+
+export function isValidAdminSession(value: string): boolean {
+  const expected = credentials();
+  if (!expected.passcode || value.length === 0) return false;
+  return timingSafeEqual(value, sessionToken(expected.username, expected.passcode));
+}
+
+export function timingSafeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && cryptoTimingSafeEqual(left, right);
 }

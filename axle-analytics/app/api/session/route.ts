@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
 
-import { ADMIN_EMAIL, readAdminIdentity } from "@/lib/auth";
+import { ADMIN_COOKIE, authenticateAdmin, createAdminSession } from "@/lib/auth";
 
 export async function POST(request: Request) {
-  void request;
-  const identity = await readAdminIdentity();
-  if (identity.userId === null) {
-    return NextResponse.json({ error: `Sign in with Google using ${ADMIN_EMAIL}.` }, { status: 401 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
-  return NextResponse.json({ ok: true, email: identity.email });
+  const username = body !== null && typeof body === "object" && "username" in body && typeof body.username === "string" ? body.username : "";
+  const passcode = body !== null && typeof body === "object" && "passcode" in body && typeof body.passcode === "string" ? body.passcode : "";
+  if (!authenticateAdmin(username, passcode)) return NextResponse.json({ error: "Incorrect username or passcode." }, { status: 401 });
+
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(ADMIN_COOKIE, createAdminSession(), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 12,
+  });
+  return response;
 }
 
 export async function DELETE() {
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.delete(ADMIN_COOKIE);
+  return response;
 }

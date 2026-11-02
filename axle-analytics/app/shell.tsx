@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignInButton, UserButton, useClerk, useUser } from "@clerk/nextjs";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
+  type FormEvent,
   type ReactNode,
 } from "react";
 
@@ -71,7 +71,6 @@ async function loadDashboard(): Promise<State> {
 export function Shell({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const pathname = usePathname();
-  const { isSignedIn } = useUser();
 
   const refresh = useCallback(() => {
     setState({ status: "loading" });
@@ -88,10 +87,6 @@ export function Shell({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (isSignedIn && state.status === "signed-out") refresh();
-  }, [isSignedIn, refresh, state.status]);
-
   // Keep the dashboard live without a manual reload. Failures are ignored so a
   // transient blip never wipes good data off the screen.
   useEffect(() => {
@@ -104,11 +99,9 @@ export function Shell({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [state.status]);
 
-  const { signOut } = useClerk();
-
   const handleSignOut = useCallback(() => {
-    void signOut().then(() => setState({ status: "signed-out" }));
-  }, [signOut]);
+    void fetch("/api/session", { method: "DELETE" }).then(() => setState({ status: "signed-out" }));
+  }, []);
 
   if (state.status !== "ready") {
     return (
@@ -126,8 +119,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="card center-card">
             <h2>Dashboard not configured</h2>
             <p className="muted small">{state.message}</p>
-            <pre>{`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_…
-CLERK_SECRET_KEY=sk_…
+            <pre>{`ANALYTICS_ADMIN_USERNAME=axleadmin
+ANALYTICS_ADMIN_PASSCODE=<your passcode>
 MONGODB_URI=mongodb://…/axle`}</pre>
           </div>
         ) : null}
@@ -173,7 +166,6 @@ MONGODB_URI=mongodb://…/axle`}</pre>
             <button type="button" className="ghost" onClick={refresh}>
               Refresh
             </button>
-            <UserButton />
             <button type="button" className="ghost" onClick={handleSignOut}>Sign out</button>
           </div>
         </aside>
@@ -185,6 +177,36 @@ MONGODB_URI=mongodb://…/axle`}</pre>
 }
 
 function LoginCard({ onSignedIn }: { onSignedIn: () => void }) {
+  const [username, setUsername] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username, passcode }),
+      });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        setError(body !== null && typeof body === "object" && "error" in body ? String(body.error) : "Sign in failed.");
+        return;
+      }
+      setUsername("");
+      setPasscode("");
+      onSignedIn();
+    } catch {
+      setError("Could not reach the dashboard API.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="auth-card">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -193,13 +215,13 @@ function LoginCard({ onSignedIn }: { onSignedIn: () => void }) {
         <h1>Axle Analytics</h1>
         <p className="muted">Private operations dashboard</p>
       </div>
-      <SignInButton mode="modal" forceRedirectUrl="/">
-        <button type="button" className="google-sign-in" onClick={onSignedIn}>
-          <span className="google-mark" aria-hidden="true">G</span>
-          Continue with Google
-        </button>
-      </SignInButton>
-      <p className="auth-note">Admin access · fawassaka862@gmail.com</p>
+      <form className="auth-form" onSubmit={submit}>
+        <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Username" autoComplete="username" required />
+        <input value={passcode} onChange={(event) => setPasscode(event.target.value)} placeholder="Passcode" type="password" autoComplete="current-password" required />
+        <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+      </form>
+      {error !== null ? <p className="warn small">{error}</p> : null}
+      <p className="auth-note">Private Axle administrator access</p>
     </div>
   );
 }
