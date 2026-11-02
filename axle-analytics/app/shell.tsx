@@ -39,7 +39,6 @@ export function useMetrics(): MetricsContextValue {
 const NAV = [
   { href: "/", label: "Overview", icon: "overview" },
   { href: "/providers", label: "Providers", icon: "providers" },
-  { href: "/revenue", label: "Revenue", icon: "revenue" },
 ] as const;
 
 async function loadDashboard(): Promise<State> {
