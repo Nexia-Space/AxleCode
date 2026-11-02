@@ -186,14 +186,20 @@ MONGODB_URI=mongodb://…/axle`}</pre>
 
 function LoginCard({ onSignedIn }: { onSignedIn: () => void }) {
   return (
-    <div className="card center-card">
-      <h2>Admin access</h2>
-      <p className="muted small">
-        Sign in with Google using <strong>fawassaka862@gmail.com</strong>.
-      </p>
+    <div className="auth-card">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="auth-logo" src="/axle-logo.png" alt="Axle" />
+      <div className="auth-copy">
+        <h1>Axle Analytics</h1>
+        <p className="muted">Private operations dashboard</p>
+      </div>
       <SignInButton mode="modal" forceRedirectUrl="/">
-        <button type="button" onClick={onSignedIn}>Continue with Google</button>
+        <button type="button" className="google-sign-in" onClick={onSignedIn}>
+          <span className="google-mark" aria-hidden="true">G</span>
+          Continue with Google
+        </button>
       </SignInButton>
+      <p className="auth-note">Admin access · fawassaka862@gmail.com</p>
     </div>
   );
 }

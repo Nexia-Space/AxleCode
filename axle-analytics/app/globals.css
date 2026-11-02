@@ -526,6 +526,69 @@ pre {
   margin: 12vh auto 0;
 }
 
+.auth-card {
+  width: min(100%, 390px);
+  margin: 16vh auto 0;
+  padding: 34px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+}
+
+.auth-logo {
+  width: 84px;
+  height: 84px;
+  margin-bottom: 22px;
+  border-radius: 18px;
+  object-fit: contain;
+  background: #0f0f0f;
+  box-shadow: 0 10px 26px rgb(0 0 0 / 28%);
+}
+
+.auth-copy h1 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.auth-copy p {
+  margin: 7px 0 24px;
+  font-size: 12.5px;
+}
+
+.google-sign-in {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 16px;
+  background: var(--fg);
+  color: #181818;
+  font-size: 13px;
+  border-radius: 7px;
+}
+
+.google-sign-in:hover {
+  background: #fff;
+}
+
+.google-mark {
+  font-weight: 700;
+  font-size: 15px;
+  color: #4285f4;
+}
+
+.auth-note {
+  margin: 17px 0 0;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
 .pill {
   display: inline-block;
   padding: 1px 7px;
