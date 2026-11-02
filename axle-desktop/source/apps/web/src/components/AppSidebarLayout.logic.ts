@@ -13,12 +13,18 @@ export type SidebarEdgePressAction = "ignore" | "open" | "pin";
 
 export function resolveSidebarEdgePointerAction(input: {
   clientX: number;
+  /** The titlebar toggle owns opening here; edge hover must not pre-empt its click. */
+  insideTitlebar?: boolean;
   open: boolean;
   /** True while the sidebar is only on screen because the pointer revealed it. */
   revealedByHover: boolean;
   /** Width the sidebar occupies while open, read before the slide animation. */
   sidebarWidth: number;
 }): SidebarEdgePointerAction {
+  if (!input.open && input.insideTitlebar) {
+    return "ignore";
+  }
+
   if (input.clientX <= SIDEBAR_EDGE_REVEAL_ZONE_WIDTH) {
     if (!input.open) {
       return "reveal";
@@ -43,10 +49,11 @@ export function resolveSidebarEdgePress(input: {
   button: number;
   clientX: number;
   insideSidebarChrome: boolean;
+  insideTitlebar?: boolean;
   open: boolean;
   revealedByHover: boolean;
 }): SidebarEdgePressAction {
-  if (input.button !== 0) {
+  if (input.button !== 0 || (!input.open && input.insideTitlebar)) {
     return "ignore";
   }
   if (input.clientX <= SIDEBAR_EDGE_REVEAL_ZONE_WIDTH) {
