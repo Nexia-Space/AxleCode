@@ -37,6 +37,27 @@ function shortLabel(label: string): string {
   return label.length > 10 ? label.slice(5) : label;
 }
 
+function smoothPath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = points[index - 1] ?? points[index];
+    const current = points[index];
+    const next = points[index + 1];
+    const following = points[index + 2] ?? next;
+    const controlOne = {
+      x: current.x + (next.x - previous.x) / 6,
+      y: current.y + (next.y - previous.y) / 6,
+    };
+    const controlTwo = {
+      x: next.x - (following.x - current.x) / 6,
+      y: next.y - (following.y - current.y) / 6,
+    };
+    path += ` C ${controlOne.x} ${controlOne.y}, ${controlTwo.x} ${controlTwo.y}, ${next.x} ${next.y}`;
+  }
+  return path;
+}
+
 export function LineChart({ data, height = 240, tone = "a", valueLabel = "value" }: LineChartProps) {
   const [hovered, setHovered] = useState<{ index: number; x: number; y: number } | null>(null);
   if (data.length === 0) return <p className="muted small">No data recorded yet.</p>;
@@ -53,8 +74,8 @@ export function LineChart({ data, height = 240, tone = "a", valueLabel = "value"
     const y = padding.top + innerHeight - (entry.value / axisMax) * innerHeight;
     return { ...entry, x, y };
   });
-  const line = points.map((point) => `${point.x},${point.y}`).join(" ");
-  const area = `${padding.left},${padding.top + innerHeight} ${line} ${padding.left + innerWidth},${padding.top + innerHeight}`;
+  const linePath = smoothPath(points);
+  const areaPath = `${linePath} L ${padding.left + innerWidth} ${padding.top + innerHeight} L ${padding.left} ${padding.top + innerHeight} Z`;
   const colors = TONES[tone];
   const labelStep = Math.max(1, Math.ceil(data.length / 7));
 
@@ -77,8 +98,8 @@ export function LineChart({ data, height = 240, tone = "a", valueLabel = "value"
           </g>
         );
       })}
-      <polygon points={area} fill={`url(#line-fill-${tone})`} />
-      <polyline points={line} fill="none" stroke={colors.line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={areaPath} fill={`url(#line-fill-${tone})`} />
+      <path d={linePath} fill="none" stroke={colors.line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point, index) => (
         <g key={`${point.label}-${index}`} onMouseEnter={() => setHovered({ index, x: point.x, y: point.y })} className="chart-point">
           <circle cx={point.x} cy={point.y} r="3.5" fill={colors.line} stroke="var(--card)" strokeWidth="2" />
