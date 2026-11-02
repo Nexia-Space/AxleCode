@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export interface BarDatum {
   label: string;
   value: number;
@@ -34,6 +36,7 @@ function axisLabel(label: string): string {
 }
 
 export function BarChart({ data, height = 210, tone = "a", valueLabel = "requests" }: BarChartProps) {
+  const [hovered, setHovered] = useState<{ index: number; x: number; y: number } | null>(null);
   if (data.length === 0) {
     return <p className="muted small">No data recorded yet.</p>;
   }
@@ -58,13 +61,15 @@ export function BarChart({ data, height = 210, tone = "a", valueLabel = "request
   const colors = TONES[tone];
 
   return (
-    <svg
-      className="chart"
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label={`${valueLabel} per period`}
-      preserveAspectRatio="none"
-    >
+    <div className="chart-wrap">
+      <svg
+        className="chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`${valueLabel} per period`}
+        preserveAspectRatio="none"
+        onMouseLeave={() => setHovered(null)}
+      >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={colors.from} />
@@ -95,7 +100,11 @@ export function BarChart({ data, height = 210, tone = "a", valueLabel = "request
         const x = padding.left + slot * index + (slot - barWidth) / 2;
         const y = padding.top + innerHeight - barHeight;
         return (
-          <g key={entry.label}>
+          <g
+            key={entry.label}
+            onMouseEnter={() => setHovered({ index, x: x + barWidth / 2, y })}
+            className="chart-point"
+          >
             <rect
               className="bar"
               x={x}
@@ -104,9 +113,7 @@ export function BarChart({ data, height = 210, tone = "a", valueLabel = "request
               height={Math.max(entry.value > 0 ? 1.5 : 0, barHeight)}
               rx={Math.min(3, barWidth / 2)}
               fill={`url(#${gradientId})`}
-            >
-              <title>{`${entry.label}: ${entry.value.toLocaleString("en-US")} ${valueLabel}`}</title>
-            </rect>
+            />
             {index % labelStep === 0 ? (
               <text x={x + barWidth / 2} y={height - 8} textAnchor="middle">
                 {axisLabel(entry.label)}
@@ -123,6 +130,16 @@ export function BarChart({ data, height = 210, tone = "a", valueLabel = "request
         y1={padding.top + innerHeight}
         y2={padding.top + innerHeight}
       />
-    </svg>
+      </svg>
+      {hovered !== null ? (
+        <div
+          className="chart-tooltip"
+          style={{ left: `${(hovered.x / width) * 100}%`, top: `${(hovered.y / height) * 100}%` }}
+        >
+          <strong>{data[hovered.index].label}</strong>
+          <span>{data[hovered.index].value.toLocaleString("en-US")} {valueLabel}</span>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export interface LineDatum {
   label: string;
   value: number;
@@ -36,6 +38,7 @@ function shortLabel(label: string): string {
 }
 
 export function LineChart({ data, height = 240, tone = "a", valueLabel = "value" }: LineChartProps) {
+  const [hovered, setHovered] = useState<{ index: number; x: number; y: number } | null>(null);
   if (data.length === 0) return <p className="muted small">No data recorded yet.</p>;
 
   const width = 760;
@@ -56,7 +59,8 @@ export function LineChart({ data, height = 240, tone = "a", valueLabel = "value"
   const labelStep = Math.max(1, Math.ceil(data.length / 7));
 
   return (
-    <svg className="chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${valueLabel} over time`} preserveAspectRatio="none">
+    <div className="chart-wrap">
+      <svg className="chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${valueLabel} over time`} preserveAspectRatio="none" onMouseLeave={() => setHovered(null)}>
       <defs>
         <linearGradient id={`line-fill-${tone}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={colors.fill} stopOpacity="0.24" />
@@ -76,13 +80,21 @@ export function LineChart({ data, height = 240, tone = "a", valueLabel = "value"
       <polygon points={area} fill={`url(#line-fill-${tone})`} />
       <polyline points={line} fill="none" stroke={colors.line} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point, index) => (
-        <g key={`${point.label}-${index}`}>
-          <circle cx={point.x} cy={point.y} r="3.5" fill={colors.line} stroke="var(--card)" strokeWidth="2">
-            <title>{`${point.label}: ${point.value.toLocaleString("en-US")} ${valueLabel}`}</title>
-          </circle>
+        <g key={`${point.label}-${index}`} onMouseEnter={() => setHovered({ index, x: point.x, y: point.y })} className="chart-point">
+          <circle cx={point.x} cy={point.y} r="3.5" fill={colors.line} stroke="var(--card)" strokeWidth="2" />
           {index % labelStep === 0 ? <text x={point.x} y={height - 9} textAnchor="middle">{shortLabel(point.label)}</text> : null}
         </g>
       ))}
-    </svg>
+      </svg>
+      {hovered !== null ? (
+        <div
+          className="chart-tooltip"
+          style={{ left: `${(hovered.x / width) * 100}%`, top: `${(hovered.y / height) * 100}%` }}
+        >
+          <strong>{data[hovered.index].label}</strong>
+          <span>{data[hovered.index].value.toLocaleString("en-US")} {valueLabel}</span>
+        </div>
+      ) : null}
+    </div>
   );
 }
