@@ -46,13 +46,20 @@ export async function GET() {
     loadClerkRoster().catch(() => ({
       configured: false,
       error: "Roster lookup failed.",
-      users: [] as Array<{ id: string; name: string | null; createdAt: string | null }>,
+      users: [] as Array<{
+        id: string;
+        name: string | null;
+        email: string | null;
+        createdAt: string | null;
+      }>,
     })),
     loadDownloadBreakdown().catch(() => null),
     loadBachsRevenue().catch(() => null),
   ]);
 
-  const rosterNameById = new Map(roster.users.map((entry) => [entry.id, entry.name ?? ""]));
+  const rosterNameById = new Map(
+    roster.users.map((entry) => [entry.id, entry.name ?? entry.email ?? ""]),
+  );
 
   const usersWithNames = users.map((user) => ({
     ...user,
@@ -65,7 +72,7 @@ export async function GET() {
     if (knownUserIds.has(entry.id)) continue;
     usersWithNames.push({
       userId: entry.id,
-      displayName: entry.name,
+      displayName: entry.name ?? entry.email,
       plan: null,
       requests: 0,
       totalTokens: 0,
@@ -85,7 +92,12 @@ export async function GET() {
   // `users.total` comes from the profile count; the roster is the real answer.
   const accountWithRoster = {
     ...account,
-    users: { ...account.users, total: namedUsers.length },
+    // Only replace the Mongo account count when the Clerk roster completed.
+    // A partial Clerk response must never make the dashboard undercount users.
+    users: {
+      ...account.users,
+      total: roster.configured && roster.error === null ? namedUsers.length : account.users.total,
+    },
   };
 
   const namedProviderUsers = providerBreakdown.providerUsers.map((entry) => ({
@@ -129,6 +141,27 @@ export async function GET() {
       downloads,
       github,
       bachs,
+      sources: [
+        { key: "mongo", label: "Account database", status: "connected", detail: "MongoDB account-api" },
+        {
+          key: "clerk",
+          label: "Identity roster",
+          status: roster.configured && roster.error === null ? "connected" : roster.configured ? "degraded" : "missing",
+          detail: roster.error ?? "Clerk user roster",
+        },
+        {
+          key: "github",
+          label: "Installer downloads",
+          status: github?.reachable ? "connected" : "degraded",
+          detail: github?.error ?? "GitHub release assets",
+        },
+        {
+          key: "bachs",
+          label: "Payments",
+          status: bachs?.reachable ? "connected" : bachs?.configured ? "degraded" : "missing",
+          detail: bachs?.error ?? "Bachs completed checkouts",
+        },
+      ],
     },
     { headers: { "Cache-Control": "no-store" } },
   );

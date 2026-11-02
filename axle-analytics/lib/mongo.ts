@@ -106,7 +106,7 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
 
   const [userTotal, planRows, subscriptionRows, usageRows, dailyRows, providerRows, billingEvents, ledgerEntries] =
     await Promise.all([
-      db.collection("axle_account_profiles").estimatedDocumentCount(),
+      db.collection("axle_account_profiles").countDocuments(),
       db
         .collection("axle_credit_accounts")
         .aggregate([{ $group: { _id: "$planId", count: { $sum: 1 } } }])
@@ -134,11 +134,19 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
         .collection("axle_account_usage_daily")
         .aggregate([
           {
+            $match: {
+              usageDate: {
+                $gte: new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10),
+              },
+            },
+          },
+          {
             $group: {
               _id: "$usageDate",
               turns: { $sum: "$turnCount" },
               tokens: { $sum: "$totalTokens" },
               costUsd: { $sum: "$costUsd" },
+              activeUsers: { $addToSet: "$userId" },
             },
           },
           { $sort: { _id: 1 } },
@@ -159,8 +167,8 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
           { $sort: { turns: -1 } },
         ])
         .toArray(),
-      db.collection("axle_billing_events").estimatedDocumentCount(),
-      db.collection("axle_credit_ledger").estimatedDocumentCount(),
+      db.collection("axle_billing_events").countDocuments(),
+      db.collection("axle_credit_ledger").countDocuments(),
     ]);
 
   const byPlan = planRows
@@ -193,6 +201,23 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
     providerMap.set(provider, entry);
   }
 
+  const dailyByDate = new Map(
+    dailyRows.map((row) => [
+      String(row._id),
+      {
+        date: String(row._id),
+        turns: Number(row.turns ?? 0),
+        tokens: Number(row.tokens ?? 0),
+        costUsd: Number(row.costUsd ?? 0),
+        activeUsers: Array.isArray(row.activeUsers) ? row.activeUsers.length : 0,
+      },
+    ]),
+  );
+  const perDay = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(Date.now() - (29 - index) * 86_400_000).toISOString().slice(0, 10);
+    return dailyByDate.get(date) ?? { date, turns: 0, tokens: 0, costUsd: 0, activeUsers: 0 };
+  });
+
   return {
     users: {
       total: userTotal,
@@ -202,12 +227,7 @@ export async function loadAccountMetrics(): Promise<AccountMetrics> {
     requests: {
       total: Number(usage?.turns ?? 0),
       totalTokens: Number(usage?.tokens ?? 0),
-      perDay: dailyRows.map((row) => ({
-        date: String(row._id),
-        turns: Number(row.turns ?? 0),
-        tokens: Number(row.tokens ?? 0),
-        costUsd: Number(row.costUsd ?? 0),
-      })),
+      perDay,
       from: usage?.from ? new Date(usage.from).toISOString().slice(0, 10) : null,
       to: usage?.to ? new Date(usage.to).toISOString().slice(0, 10) : null,
     },
@@ -317,9 +337,10 @@ export async function loadUserBreakdown(): Promise<UserRow[]> {
   for (const id of sessionUsers) identityIds.add(String(id));
   for (const id of deviceUsers) identityIds.add(String(id));
   for (const row of usageRows) identityIds.add(String(row._id));
-  for (const row of profiles) {
-    if (String(row.displayName ?? "").length > 0) identityIds.add(String(row._id));
-  }
+  // A profile is an account even when the user has never set a display name.
+  // Enrichment is separate from identity discovery; filtering null names here
+  // was the reason the dashboard undercounted users without Clerk data.
+  for (const row of profiles) identityIds.add(String(row._id));
 
   const usageById = new Map(usageRows.map((row) => [String(row._id), row]));
 

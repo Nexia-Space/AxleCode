@@ -10,7 +10,13 @@ export interface AccountMetrics {
   requests: {
     total: number;
     totalTokens: number;
-    perDay: Array<{ date: string; turns: number; tokens: number; costUsd: number }>;
+    perDay: Array<{
+      date: string;
+      turns: number;
+      tokens: number;
+      costUsd: number;
+      activeUsers: number;
+    }>;
     from: string | null;
     to: string | null;
   };
@@ -48,6 +54,12 @@ export interface DashboardPayload {
   downloads: DownloadMetrics;
   github?: DownloadBreakdown | null;
   bachs?: BachsRevenue | null;
+  sources: Array<{
+    key: string;
+    label: string;
+    status: "connected" | "degraded" | "missing";
+    detail: string;
+  }>;
 }
 
 /** Safe fallback so a failed billing fetch cannot crash a page at render time. */

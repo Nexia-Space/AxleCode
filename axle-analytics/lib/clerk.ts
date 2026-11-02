@@ -49,6 +49,21 @@ function pickName(user: ClerkUser): string | null {
   return null;
 }
 
+function pickEmail(user: ClerkUser): string | null {
+  const emails = Array.isArray(user.email_addresses) ? user.email_addresses : [];
+  const primaryId = typeof user.primary_email_address_id === "string" ? user.primary_email_address_id : null;
+  const primary =
+    emails.find((entry) => {
+      if (entry === null || typeof entry !== "object") return false;
+      return primaryId !== null && (entry as { id?: unknown }).id === primaryId;
+    }) ?? emails[0];
+  if (primary !== null && typeof primary === "object") {
+    const address = (primary as { email_address?: unknown }).email_address;
+    if (typeof address === "string" && address.length > 0) return address;
+  }
+  return null;
+}
+
 export async function loadUserNames(userIds: ReadonlyArray<string>): Promise<UserNameMap> {
   const secret = process.env.CLERK_SECRET_KEY?.trim();
   if (!secret) {
@@ -90,6 +105,7 @@ export async function loadUserNames(userIds: ReadonlyArray<string>): Promise<Use
 export interface ClerkRosterEntry {
   id: string;
   name: string | null;
+  email: string | null;
   createdAt: string | null;
 }
 
@@ -150,6 +166,7 @@ export async function loadClerkRoster(): Promise<ClerkRoster> {
       users.push({
         id: record.id,
         name: pickName(record),
+        email: pickEmail(record),
         createdAt:
           typeof record.created_at === "number"
             ? new Date(record.created_at).toISOString()
