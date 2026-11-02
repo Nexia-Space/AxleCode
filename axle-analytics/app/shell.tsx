@@ -113,7 +113,14 @@ export function Shell({ children }: { children: ReactNode }) {
   if (state.status !== "ready") {
     return (
       <div className="content">
-        {state.status === "loading" ? <p className="muted">Loading metrics…</p> : null}
+        {state.status === "loading" ? (
+          <div className="loading-state">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/axle-logo.png" alt="Axle" />
+            <span className="loading-spinner" aria-hidden="true" />
+            <span className="muted">Loading analytics…</span>
+          </div>
+        ) : null}
         {state.status === "signed-out" ? <LoginCard onSignedIn={refresh} /> : null}
         {state.status === "unconfigured" ? (
           <div className="card center-card">
