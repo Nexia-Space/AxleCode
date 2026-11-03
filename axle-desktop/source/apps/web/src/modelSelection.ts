@@ -27,7 +27,10 @@ import { sortModelsForProviderInstance } from "./modelOrdering";
 
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
-function isOllamaCloudConfigured(settings: UnifiedSettings, instanceId: ProviderInstanceId): boolean {
+function isOllamaCloudConfigured(
+  settings: UnifiedSettings,
+  instanceId: ProviderInstanceId,
+): boolean {
   return (
     settings.providerInstances[instanceId]?.environment?.some(
       (variable) => variable.name === "OLLAMA_CLOUD_CONFIGURED" && variable.value === "true",
@@ -36,7 +39,6 @@ function isOllamaCloudConfigured(settings: UnifiedSettings, instanceId: Provider
 }
 
 const DEFAULT_TEXT_GENERATION_INSTANCE_ID = ProviderInstanceId.make("codex");
-
 
 /**
  * Resolve the custom-model list for a given instance, preferring the
@@ -210,8 +212,9 @@ export function getAppModelOptionsForInstance(
   const options: AppModelOption[] = entry.models
     .filter(
       (model) =>
-        !model.slug.startsWith("ollama-cloud/") ||
-        isOllamaCloudConfigured(settings, entry.instanceId),
+        !isCustomProviderModelDisabled(settings, entry, model.slug) &&
+        (!model.slug.startsWith("ollama-cloud/") ||
+          isOllamaCloudConfigured(settings, entry.instanceId)),
     )
     .map(toAppModelOption);
   const seen = new Set(options.map((option) => option.slug));
@@ -234,6 +237,23 @@ export function getAppModelOptionsForInstance(
   return applyInstanceModelPreferences(
     options,
     readInstanceModelPreferences(settings, entry.instanceId),
+  );
+}
+
+function isCustomProviderModelDisabled(
+  settings: UnifiedSettings,
+  entry: ProviderInstanceEntry,
+  modelSlug: string,
+): boolean {
+  if (entry.driverKind !== "axle") return false;
+  const separator = modelSlug.indexOf("/");
+  if (separator <= 0) return false;
+  const envPrefix = modelSlug.slice(0, separator).replaceAll("-", "_").toUpperCase();
+  return (
+    settings.providerInstances[entry.instanceId]?.environment?.some(
+      (variable) =>
+        variable.name === `${envPrefix}_ENABLED` && variable.value.trim().toLowerCase() === "false",
+    ) ?? false
   );
 }
 

@@ -832,6 +832,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     }
     return out;
   }, [providerInstanceEntries, settings]);
+  const hasAvailableModelOptions = useMemo(
+    () => [...modelOptionsByInstance.values()].some((options) => options.length > 0),
+    [modelOptionsByInstance],
+  );
   const selectedModelForPickerWithCustomFallback = useMemo(() => {
     const currentOptions = modelOptionsByInstance.get(selectedInstanceId) ?? [];
     return currentOptions.some((option) => option.slug === selectedModelForPicker)
@@ -2511,37 +2515,40 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                 }
                 className="flex shrink-0 flex-nowrap items-center justify-end gap-2"
               >
-                <ProviderModelPicker
-                  compact={isComposerFooterCompact}
-                  activeInstanceId={selectedInstanceId}
-                  model={selectedModelForPickerWithCustomFallback}
-                  lockedProvider={lockedProvider}
-                  lockedContinuationGroupKey={lockedContinuationGroupKey}
-                  instanceEntries={providerInstanceEntries}
-                  keybindings={keybindings}
-                  modelOptionsByInstance={modelOptionsByInstance}
-                  traitsMenuContent={providerTraitsMenuContent}
-                  terminalOpen={terminalOpen}
-                  open={isComposerModelPickerOpen}
-                  {...(composerProviderState.modelPickerIconClassName
-                    ? {
-                        activeProviderIconClassName: composerProviderState.modelPickerIconClassName,
+                {hasAvailableModelOptions ? (
+                  <ProviderModelPicker
+                    compact={isComposerFooterCompact}
+                    activeInstanceId={selectedInstanceId}
+                    model={selectedModelForPickerWithCustomFallback}
+                    lockedProvider={lockedProvider}
+                    lockedContinuationGroupKey={lockedContinuationGroupKey}
+                    instanceEntries={providerInstanceEntries}
+                    keybindings={keybindings}
+                    modelOptionsByInstance={modelOptionsByInstance}
+                    traitsMenuContent={providerTraitsMenuContent}
+                    terminalOpen={terminalOpen}
+                    open={isComposerModelPickerOpen}
+                    {...(composerProviderState.modelPickerIconClassName
+                      ? {
+                          activeProviderIconClassName:
+                            composerProviderState.modelPickerIconClassName,
+                        }
+                      : {})}
+                    onOpenChange={(open) => {
+                      setIsComposerModelPickerOpen(open);
+                      if (!open) return;
+                      const axleProvider = providerInstanceEntries.find(
+                        (entry) =>
+                          entry.enabled && entry.driverKind === ProviderDriverKind.make("axle"),
+                      );
+                      if (axleProvider && props.onRefreshModelCatalog) {
+                        void props.onRefreshModelCatalog(axleProvider.instanceId).catch(() => {});
                       }
-                    : {})}
-                  onOpenChange={(open) => {
-                    setIsComposerModelPickerOpen(open);
-                    if (!open) return;
-                    const axleProvider = providerInstanceEntries.find(
-                      (entry) =>
-                        entry.enabled && entry.driverKind === ProviderDriverKind.make("axle"),
-                    );
-                    if (axleProvider && props.onRefreshModelCatalog) {
-                      void props.onRefreshModelCatalog(axleProvider.instanceId).catch(() => {});
-                    }
-                  }}
-                  getModelDisabledReason={getModelDisabledReason}
-                  onInstanceModelChange={onProviderModelSelect}
-                />
+                    }}
+                    getModelDisabledReason={getModelDisabledReason}
+                    onInstanceModelChange={onProviderModelSelect}
+                  />
+                ) : null}
                 <ComposerFooterPrimaryActions
                   compact={isComposerPrimaryActionsCompact}
                   activeContextWindow={null}
