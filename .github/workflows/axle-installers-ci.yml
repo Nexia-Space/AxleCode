@@ -148,7 +148,9 @@ jobs:
 
   build-macos-arm64:
     needs: test-update-feeds
-    runs-on: macos-latest
+    # Keep ARM packaging on the available macOS pool; the job cross-compiles
+    # the explicit aarch64 target below.
+    runs-on: macos-14
     defaults:
       run:
         working-directory: axle-desktop/source

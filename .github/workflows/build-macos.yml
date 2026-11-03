@@ -183,7 +183,9 @@ jobs:
 
   build-macos-arm64:
     needs: [test-update-feeds, prepare-release]
-    runs-on: macos-latest
+    # macos-latest can resolve to an unavailable hosted ARM pool. The macos-14
+    # runner is available and this job cross-compiles the explicit ARM target.
+    runs-on: macos-14
     defaults:
       run:
         working-directory: axle-desktop/source
