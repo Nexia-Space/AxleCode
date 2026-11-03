@@ -15,7 +15,7 @@ export const FEATURE_DETAILS = [
     { title: "Streaming responses", copy: "Follow the response and the work as they happen." },
   ] },
   { group: "Make it yours", items: [
-    { title: "Provider choice", copy: "Connect OpenAI, Anthropic, Google, OpenRouter, NVIDIA, Mistral, or any OpenAI-compatible endpoint with your own key." },
+    { title: "Provider choice", copy: "Connect OpenAI, Anthropic, Google, OpenRouter, Mistral, or any OpenAI-compatible endpoint with your own key." },
     { title: "Plan mode", copy: "Explore a problem with read-only tools before moving to edits." },
     { title: "Approval controls", copy: "Choose how sensitive file and command actions are approved." },
     { title: "Light and dark", copy: "Choose the theme that works best for your environment." },

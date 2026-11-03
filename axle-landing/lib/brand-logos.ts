@@ -22,7 +22,6 @@ export const PROVIDER_LOGOS: Readonly<Record<string, string>> = {
   fireworks: LOGO("fireworks.png"),
   cerebras: LOGO("cerebras.png"),
   groq: LOGO("groq.svg"),
-  "nvidia-nim": LOGO("nvidia.svg"),
   mistral: LOGO("mistral.svg"),
   deepseek: LOGO("deepseek.svg"),
   xai: LOGO("xai.png"),

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const LISTED_PROVIDERS = MODEL_PROVIDERS.filter(
-  (provider) => provider.id !== "nvidia-nim" && provider.id !== "agent-router",
+  (provider) => provider.id !== "agent-router",
 );
 
 export default function ModelsPage() {

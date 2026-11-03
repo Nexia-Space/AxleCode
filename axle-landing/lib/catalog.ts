@@ -63,15 +63,6 @@ export const MODEL_PROVIDERS = [
     key: "GROQ_API_KEY",
   },
   {
-    id: "nvidia-nim",
-    name: "NVIDIA NIM",
-    mark: "N",
-    family: "NVIDIA-hosted models",
-    type: "Cloud",
-    copy: "Add an NVIDIA API key and reach the models hosted on build.nvidia.com from your own account.",
-    key: "NVIDIA_API_KEY",
-  },
-  {
     id: "agent-router",
     name: "Agent Router",
     mark: "⇄",
