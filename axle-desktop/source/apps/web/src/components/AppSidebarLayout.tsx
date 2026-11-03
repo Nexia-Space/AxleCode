@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import * as Schema from "effect/Schema";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import { isElectron } from "../env";
@@ -9,6 +9,10 @@ import { resolveShortcutCommand, shortcutLabelForCommand } from "../keybindings"
 import { isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { DesktopUpdateBanner } from "./DesktopUpdateBanner";
+import {
+  SIDEBAR_EDGE_REVEAL_CLOSE_DELAY_MS,
+  SIDEBAR_EDGE_REVEAL_ZONE_WIDTH,
+} from "./AppSidebarLayout.logic";
 import ThreadSidebar from "./Sidebar";
 import {
   resolveInitialThreadSidebarWidth,
@@ -21,6 +25,11 @@ import { Sidebar, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } fro
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "90px";
+
+function resolveOpenSidebarFootprint(): number {
+  const container = document.querySelector<HTMLElement>("[data-slot='sidebar-container']");
+  return container?.getBoundingClientRect().width ?? 0;
+}
 
 function readInitialThreadSidebarWidth(): number {
   try {
@@ -83,6 +92,70 @@ function SidebarControl() {
       </Tooltip>
     </div>
   );
+}
+
+function SidebarEdgeReveal() {
+  const { isMobile, open, setOpen } = useSidebar();
+  const lastPointerXRef = useRef<number | null>(null);
+  const revealedByHoverRef = useRef(false);
+
+  useEffect(() => {
+    if (isMobile) return;
+
+    let closeTimer: number | null = null;
+
+    const clearCloseTimer = () => {
+      if (closeTimer === null) return;
+      window.clearTimeout(closeTimer);
+      closeTimer = null;
+    };
+
+    const scheduleClose = () => {
+      if (closeTimer !== null) return;
+      closeTimer = window.setTimeout(() => {
+        closeTimer = null;
+        revealedByHoverRef.current = false;
+        setOpen(false);
+      }, SIDEBAR_EDGE_REVEAL_CLOSE_DELAY_MS);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const previousX = lastPointerXRef.current;
+      lastPointerXRef.current = event.clientX;
+
+      if (!open) {
+        if (
+          (previousX === null || previousX > SIDEBAR_EDGE_REVEAL_ZONE_WIDTH) &&
+          event.clientX <= SIDEBAR_EDGE_REVEAL_ZONE_WIDTH
+        ) {
+          revealedByHoverRef.current = true;
+          setOpen(true);
+        }
+        return;
+      }
+
+      if (!revealedByHoverRef.current) return;
+      if (event.clientX <= resolveOpenSidebarFootprint()) {
+        clearCloseTimer();
+      } else {
+        scheduleClose();
+      }
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    return () => {
+      clearCloseTimer();
+      window.removeEventListener("pointermove", onPointerMove);
+    };
+  }, [isMobile, open, setOpen]);
+
+  useEffect(() => {
+    if (!open) {
+      revealedByHoverRef.current = false;
+    }
+  }, [open]);
+
+  return null;
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
@@ -162,6 +235,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <SidebarRail />
       </Sidebar>
       <SidebarControl />
+      <SidebarEdgeReveal />
       {children}
       <DesktopUpdateBanner />
     </SidebarProvider>
