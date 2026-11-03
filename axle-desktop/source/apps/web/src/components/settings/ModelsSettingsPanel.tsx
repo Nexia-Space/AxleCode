@@ -51,6 +51,7 @@ import {
 } from "../chat/providerIconUtils";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
+import { cn } from "../../lib/utils";
 import { AxleOfflineSettings } from "./AxleOfflineSettings";
 import { SettingsPageContainer, SettingsSection } from "./settingsLayout";
 
@@ -200,6 +201,8 @@ const MODEL_APIS: ReadonlyArray<{
   },
 ];
 
+type ProviderSettingsTab = "offline" | "configuration" | "custom";
+
 export function ModelsSettingsPanel() {
   const settings = usePrimarySettings();
   const updateSettings = useUpdatePrimarySettings();
@@ -211,6 +214,7 @@ export function ModelsSettingsPanel() {
   });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [modelQuery, setModelQuery] = useState("");
+  const [providerTab, setProviderTab] = useState<ProviderSettingsTab>("configuration");
   const [customProviderDraft, setCustomProviderDraft] = useState({
     name: "",
     baseUrl: "",
@@ -542,270 +546,323 @@ export function ModelsSettingsPanel() {
       title="Providers"
       description="Axle is included. Connect your own providers to bring their models into the picker."
     >
-      <AxleOfflineSettings
-        onModelsChanged={() => {
-          void refreshAxleProvider().catch(() => {});
-        }}
-      />
+      <div className="space-y-4">
+        <div
+          role="tablist"
+          aria-label="Provider settings"
+          className="flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-border/70 bg-muted/20 p-1"
+        >
+          {(
+            [
+              ["offline", "Axle Offline"],
+              ["configuration", "Provider configuration"],
+              ["custom", "Custom providers"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={providerTab === value}
+              onClick={() => setProviderTab(value)}
+              className={cn(
+                "min-w-max flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                providerTab === value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-      <SettingsSection title="Provider configuration">
-        <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-5 py-4 text-[13px] font-medium text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-            <span className="space-y-1">
-              <span className="block">Model APIs and credentials</span>
-              <span className="block text-xs font-normal text-muted-foreground">
-                Manage API keys for your model providers.
-              </span>
-            </span>
-            <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="border-t border-border/60">
-            {MODEL_APIS.map((api) => {
-              const { id, name, envName, baseUrlEnvName, placeholder, description, Logo } = api;
-              const stored = variables.get(envName);
-              const configured = stored?.valueRedacted === true || Boolean(stored?.value);
-              const draft = drafts[envName] ?? "";
-              const baseUrlDraft = baseUrlEnvName ? (drafts[baseUrlEnvName] ?? "") : "";
-              const configuredBaseUrl = Boolean(
-                baseUrlEnvName ? variables.get(baseUrlEnvName)?.value : undefined,
-              );
-              return (
-                <div key={id} className="border-t border-border/60 px-5 py-4 first:border-t-0">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/70 shadow-sm/4">
-                        <Logo className="size-5 grayscale" aria-hidden />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-[13px] font-semibold text-foreground">{name}</h3>
-                          {configured ? (
-                            <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">
-                              <CheckCircle2Icon className="size-3" /> Configured
-                            </span>
-                          ) : null}
+        {providerTab === "offline" ? (
+          <AxleOfflineSettings
+            onModelsChanged={() => {
+              void refreshAxleProvider().catch(() => {});
+            }}
+          />
+        ) : null}
+
+        {providerTab === "configuration" ? (
+          <SettingsSection title="Provider configuration">
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-5 py-4 text-[13px] font-medium text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                <span className="space-y-1">
+                  <span className="block">Model APIs and credentials</span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    Manage API keys for your model providers.
+                  </span>
+                </span>
+                <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-border/60">
+                {MODEL_APIS.map((api) => {
+                  const { id, name, envName, baseUrlEnvName, placeholder, description, Logo } = api;
+                  const stored = variables.get(envName);
+                  const configured = stored?.valueRedacted === true || Boolean(stored?.value);
+                  const draft = drafts[envName] ?? "";
+                  const baseUrlDraft = baseUrlEnvName ? (drafts[baseUrlEnvName] ?? "") : "";
+                  const configuredBaseUrl = Boolean(
+                    baseUrlEnvName ? variables.get(baseUrlEnvName)?.value : undefined,
+                  );
+                  return (
+                    <div key={id} className="border-t border-border/60 px-5 py-4 first:border-t-0">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/70 shadow-sm/4">
+                            <Logo className="size-5 grayscale" aria-hidden />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-[13px] font-semibold text-foreground">{name}</h3>
+                              {configured ? (
+                                <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">
+                                  <CheckCircle2Icon className="size-3" /> Configured
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80">
+                              {description}
+                            </p>
+                          </div>
                         </div>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80">
-                          {description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex w-full min-w-0 flex-col gap-2 lg:max-w-md lg:flex-1">
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <input
-                          type="password"
-                          value={draft}
-                          autoComplete="off"
-                          spellCheck={false}
-                          placeholder={configured ? "Enter a replacement key" : placeholder}
-                          aria-label={`${name} API key`}
-                          onChange={(event) =>
-                            setDrafts((current) => ({ ...current, [envName]: event.target.value }))
-                          }
-                          className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-9 shrink-0 gap-1.5"
-                          disabled={draft.trim().length === 0}
-                          onClick={() => commitProviderKey(api, draft.trim())}
-                        >
-                          <SaveIcon className="size-3.5" /> Save key
-                        </Button>
-                        {configured ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-9 shrink-0 gap-1.5 text-destructive hover:text-destructive"
-                            onClick={() => commitProviderKey(api, "")}
-                          >
-                            <Trash2Icon className="size-3.5" /> Remove
-                          </Button>
-                        ) : null}
-                      </div>
-                      {baseUrlEnvName ? (
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <input
-                            type="text"
-                            value={baseUrlDraft}
-                            autoComplete="off"
-                            spellCheck={false}
-                            placeholder={
-                              configuredBaseUrl
-                                ? "Replace the current base URL"
-                                : "https://your-gateway.example/v1"
-                            }
-                            aria-label={`${name} base URL`}
-                            onChange={(event) =>
-                              setDrafts((current) => ({
-                                ...current,
-                                [baseUrlEnvName]: event.target.value,
-                              }))
-                            }
-                            className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-9 shrink-0 gap-1.5"
-                            disabled={baseUrlDraft.trim().length === 0}
-                            onClick={() =>
-                              commitProviderVariable(baseUrlEnvName, baseUrlDraft.trim())
-                            }
-                          >
-                            <SaveIcon className="size-3.5" /> Save URL
-                          </Button>
-                          {configuredBaseUrl ? (
+                        <div className="flex w-full min-w-0 flex-col gap-2 lg:max-w-md lg:flex-1">
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <input
+                              type="password"
+                              value={draft}
+                              autoComplete="off"
+                              spellCheck={false}
+                              placeholder={configured ? "Enter a replacement key" : placeholder}
+                              aria-label={`${name} API key`}
+                              onChange={(event) =>
+                                setDrafts((current) => ({
+                                  ...current,
+                                  [envName]: event.target.value,
+                                }))
+                              }
+                              className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
+                            />
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
                               className="h-9 shrink-0 gap-1.5"
-                              onClick={() => commitProviderVariable(baseUrlEnvName, "")}
+                              disabled={draft.trim().length === 0}
+                              onClick={() => commitProviderKey(api, draft.trim())}
                             >
-                              Reset
+                              <SaveIcon className="size-3.5" /> Save key
                             </Button>
+                            {configured ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-9 shrink-0 gap-1.5 text-destructive hover:text-destructive"
+                                onClick={() => commitProviderKey(api, "")}
+                              >
+                                <Trash2Icon className="size-3.5" /> Remove
+                              </Button>
+                            ) : null}
+                          </div>
+                          {baseUrlEnvName ? (
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <input
+                                type="text"
+                                value={baseUrlDraft}
+                                autoComplete="off"
+                                spellCheck={false}
+                                placeholder={
+                                  configuredBaseUrl
+                                    ? "Replace the current base URL"
+                                    : "https://your-gateway.example/v1"
+                                }
+                                aria-label={`${name} base URL`}
+                                onChange={(event) =>
+                                  setDrafts((current) => ({
+                                    ...current,
+                                    [baseUrlEnvName]: event.target.value,
+                                  }))
+                                }
+                                className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-9 shrink-0 gap-1.5"
+                                disabled={baseUrlDraft.trim().length === 0}
+                                onClick={() =>
+                                  commitProviderVariable(baseUrlEnvName, baseUrlDraft.trim())
+                                }
+                              >
+                                <SaveIcon className="size-3.5" /> Save URL
+                              </Button>
+                              {configuredBaseUrl ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-9 shrink-0 gap-1.5"
+                                  onClick={() => commitProviderVariable(baseUrlEnvName, "")}
+                                >
+                                  Reset
+                                </Button>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
-                      ) : null}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </details>
-      </SettingsSection>
+                  );
+                })}
+              </div>
+            </details>
+          </SettingsSection>
+        ) : null}
 
-      <SettingsSection
-        title="Custom providers"
-        headerAction={
-          customProviders.length > 0 ? (
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {customProviders.length} added
-            </span>
-          ) : null
-        }
-      >
-        <div className="space-y-4 px-4 py-4 sm:px-5">
-          <p className="text-xs leading-5 text-muted-foreground">
-            Bring your own OpenAI-compatible endpoint. Paste its base URL and API key, and Axle
-            checks the endpoint before listing its models above, so you can switch between any of
-            them.
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input
-              type="text"
-              value={customProviderDraft.name}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Provider name, e.g. NVIDIA NIM"
-              aria-label="Custom provider name"
-              onChange={(event) =>
-                setCustomProviderDraft((current) => ({ ...current, name: event.target.value }))
-              }
-              className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
-            />
-            <input
-              type="password"
-              value={customProviderDraft.apiKey}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="API key"
-              aria-label="Custom provider API key"
-              onChange={(event) =>
-                setCustomProviderDraft((current) => ({ ...current, apiKey: event.target.value }))
-              }
-              className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
-            />
-            <input
-              type="text"
-              value={customProviderDraft.baseUrl}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="Base URL, e.g. https://integrate.api.nvidia.com/v1"
-              aria-label="Custom provider base URL"
-              onChange={(event) =>
-                setCustomProviderDraft((current) => ({ ...current, baseUrl: event.target.value }))
-              }
-              className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20 sm:col-span-2"
-            />
-          </div>
-          {customProviderDraftPreset ? (
-            <p role="status" className="text-xs leading-5 text-muted-foreground">
-              Detected{" "}
-              <span className="font-medium text-foreground">{customProviderDraftPreset.label}</span>
-              {customProviderDraftHeaders.length > 0
-                ? `. This endpoint requires ${customProviderDraftHeaders
-                    .map(([name]) => name)
-                    .join(", ")}, which Axle sends for you.`
-                : "."}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 shrink-0 gap-1.5"
-              disabled={!clientSettingsHydrated}
-              onClick={addCustomProvider}
-            >
-              <PlusIcon className="size-3.5" /> Add provider
-            </Button>
-            {customProviderError ? (
-              <p role="alert" className="text-xs text-destructive">
-                {customProviderError}
+        {providerTab === "custom" ? (
+          <SettingsSection
+            title="Custom providers"
+            headerAction={
+              customProviders.length > 0 ? (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {customProviders.length} added
+                </span>
+              ) : null
+            }
+          >
+            <div className="space-y-4 px-4 py-4 sm:px-5">
+              <p className="text-xs leading-5 text-muted-foreground">
+                Bring your own OpenAI-compatible endpoint. Paste its base URL and API key, and Axle
+                checks the endpoint before listing its models above, so you can switch between any
+                of them.
               </p>
-            ) : null}
-          </div>
-        </div>
-        {customProviders.length > 0 ? (
-          <div className="border-t border-border/70">
-            {customProviders.map((provider) => (
-              <div
-                key={provider.envPrefix}
-                className="flex flex-col gap-3 border-b border-border/60 px-5 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-[13px] font-semibold text-foreground">{provider.label}</h3>
-                    {provider.hasKey ? (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">
-                        <CheckCircle2Icon className="size-3" /> Key saved
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">{provider.baseUrl}</p>
-                  {provider.headers.length > 0 ? (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground/80">
-                      Sends {provider.headers.map(([name]) => name).join(", ")}
-                    </p>
-                  ) : null}
-                </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  type="text"
+                  value={customProviderDraft.name}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Provider name, e.g. NVIDIA NIM"
+                  aria-label="Custom provider name"
+                  onChange={(event) =>
+                    setCustomProviderDraft((current) => ({ ...current, name: event.target.value }))
+                  }
+                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
+                />
+                <input
+                  type="password"
+                  value={customProviderDraft.apiKey}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="API key"
+                  aria-label="Custom provider API key"
+                  onChange={(event) =>
+                    setCustomProviderDraft((current) => ({
+                      ...current,
+                      apiKey: event.target.value,
+                    }))
+                  }
+                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
+                />
+                <input
+                  type="text"
+                  value={customProviderDraft.baseUrl}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Base URL, e.g. https://integrate.api.nvidia.com/v1"
+                  aria-label="Custom provider base URL"
+                  onChange={(event) =>
+                    setCustomProviderDraft((current) => ({
+                      ...current,
+                      baseUrl: event.target.value,
+                    }))
+                  }
+                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20 sm:col-span-2"
+                />
+              </div>
+              {customProviderDraftPreset ? (
+                <p role="status" className="text-xs leading-5 text-muted-foreground">
+                  Detected{" "}
+                  <span className="font-medium text-foreground">
+                    {customProviderDraftPreset.label}
+                  </span>
+                  {customProviderDraftHeaders.length > 0
+                    ? `. This endpoint requires ${customProviderDraftHeaders
+                        .map(([name]) => name)
+                        .join(", ")}, which Axle sends for you.`
+                    : "."}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  className="h-9 shrink-0 gap-1.5 text-destructive hover:text-destructive"
+                  className="h-9 shrink-0 gap-1.5"
                   disabled={!clientSettingsHydrated}
-                  onClick={() =>
-                    writeCustomProvider(provider.envPrefix, {
-                      label: "",
-                      baseUrl: "",
-                      apiKey: "",
-                    })
-                  }
+                  onClick={addCustomProvider}
                 >
-                  <Trash2Icon className="size-3.5" /> Remove
+                  <PlusIcon className="size-3.5" /> Add provider
                 </Button>
+                {customProviderError ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    {customProviderError}
+                  </p>
+                ) : null}
               </div>
-            ))}
-          </div>
+            </div>
+            {customProviders.length > 0 ? (
+              <div className="border-t border-border/70">
+                {customProviders.map((provider) => (
+                  <div
+                    key={provider.envPrefix}
+                    className="flex flex-col gap-3 border-b border-border/60 px-5 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-[13px] font-semibold text-foreground">
+                          {provider.label}
+                        </h3>
+                        {provider.hasKey ? (
+                          <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground">
+                            <CheckCircle2Icon className="size-3" /> Key saved
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {provider.baseUrl}
+                      </p>
+                      {provider.headers.length > 0 ? (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground/80">
+                          Sends {provider.headers.map(([name]) => name).join(", ")}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 shrink-0 gap-1.5 text-destructive hover:text-destructive"
+                      disabled={!clientSettingsHydrated}
+                      onClick={() =>
+                        writeCustomProvider(provider.envPrefix, {
+                          label: "",
+                          baseUrl: "",
+                          apiKey: "",
+                        })
+                      }
+                    >
+                      <Trash2Icon className="size-3.5" /> Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </SettingsSection>
         ) : null}
-      </SettingsSection>
+      </div>
 
       <SettingsSection
         title="Model visibility"
