@@ -65,7 +65,7 @@ function readInitialThreadSidebarWidth(): number {
 
 function SidebarControl() {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { toggleSidebar } = useSidebar();
+  const { open, setOpen, toggleSidebar } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle");
 
   useEffect(() => {
@@ -90,7 +90,7 @@ function SidebarControl() {
 
   return (
     <div
-      className="pointer-events-none fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-[100] flex h-[var(--workspace-topbar-height)] items-center"
+      className="pointer-events-auto fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-[100] flex h-[var(--workspace-topbar-height)] items-center"
       data-sidebar-control=""
     >
       <Tooltip>
@@ -99,6 +99,10 @@ function SidebarControl() {
             <SidebarTrigger
               className="pointer-events-auto rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Toggle main sidebar"
+              onClick={(event) => {
+                event.preventDefault();
+                setOpen(!open);
+              }}
             />
           }
         />
