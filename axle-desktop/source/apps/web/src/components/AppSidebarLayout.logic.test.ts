@@ -129,6 +129,19 @@ describe("sidebar edge press", () => {
     ).toBe("ignore");
   });
 
+  it("leaves open titlebar presses to the toggle", () => {
+    expect(
+      resolveSidebarEdgePress({
+        button: 0,
+        clientX: 4,
+        insideSidebarChrome: true,
+        insideTitlebar: true,
+        open: true,
+        revealedByHover: true,
+      }),
+    ).toBe("ignore");
+  });
+
   it("ignores presses away from the collapsed edge", () => {
     expect(
       resolveSidebarEdgePress({

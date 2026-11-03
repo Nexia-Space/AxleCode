@@ -53,7 +53,9 @@ export function resolveSidebarEdgePress(input: {
   open: boolean;
   revealedByHover: boolean;
 }): SidebarEdgePressAction {
-  if (input.button !== 0 || (!input.open && input.insideTitlebar)) {
+  // The titlebar toggle owns all presses in its area. Never let the edge
+  // fallback compete with it, regardless of the current sidebar state.
+  if (input.button !== 0 || input.insideTitlebar) {
     return "ignore";
   }
   if (input.clientX <= SIDEBAR_EDGE_REVEAL_ZONE_WIDTH) {
