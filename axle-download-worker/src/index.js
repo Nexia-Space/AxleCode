@@ -177,6 +177,7 @@ function githubLatestReleaseConfig(release) {
       size: asset.size,
       contentType: typeof asset.content_type === "string" ? asset.content_type : "application/octet-stream",
       sha256: assetSha256(asset),
+      apiUrl: requiredHttpsUrl(asset.url || asset.browser_download_url, `API URL for ${name}`),
       url: requiredHttpsUrl(asset.browser_download_url, `URL for ${name}`),
     });
   }
@@ -315,8 +316,25 @@ function redirect(url) {
   return new Response(null, { status: 302, headers: { ...publicHeaders(), Location: url } });
 }
 
-async function githubFeedResponse(request, release, feedFile) {
-  const response = await fetch(feedFile.url, { cf: { cacheTtl: 60, cacheEverything: true } });
+function githubHeaders(env, accept = "application/octet-stream") {
+  return {
+    accept,
+    "user-agent": "Axle-download-worker",
+    "x-github-api-version": "2022-11-28",
+    ...(env.GITHUB_TOKEN ? { authorization: `Bearer ${env.GITHUB_TOKEN}` } : {}),
+  };
+}
+
+function workerAssetUrl(request, file) {
+  const url = new URL(request.url);
+  const path = file.platform === "windows-x64" ? `windows/x64/${encodeURIComponent(file.name)}` : `${file.platform.replace("-", "/")}/${encodeURIComponent(file.name)}`;
+  url.pathname = `/get/updates/${path}`;
+  url.search = "";
+  return url.href;
+}
+
+async function githubFeedResponse(request, env, release, feedFile) {
+  const response = await fetch(feedFile.apiUrl, { headers: githubHeaders(env), cf: { cacheTtl: 60, cacheEverything: true } });
   if (!response.ok) throw new Error(`GitHub update feed returned HTTP ${response.status}.`);
   const feed = await response.text();
   let rewrittenUrls = 0;
@@ -325,13 +343,27 @@ async function githubFeedResponse(request, release, feedFile) {
     const asset = release.files.find((candidate) => candidate.name === assetName && candidate.platform === feedFile.platform);
     if (!asset) throw new Error(`GitHub update feed references an unknown asset: ${assetName}.`);
     rewrittenUrls += 1;
-    return `${prefix}${quote}${asset.url}${quote}${suffix}`;
+    const downloadUrl = env.GITHUB_TOKEN ? workerAssetUrl(request, asset) : asset.url;
+    return `${prefix}${quote}${downloadUrl}${quote}${suffix}`;
   });
   if (rewrittenUrls === 0) throw new Error(`GitHub update feed ${feedFile.name} contains no downloadable files.`);
   return new Response(request.method === "HEAD" ? null : pinnedFeed, {
     status: 200,
     headers: { ...publicHeaders(), "Content-Type": response.headers.get("content-type") || "text/yaml; charset=utf-8" },
   });
+}
+
+async function githubAssetResponse(request, env, file) {
+  const response = await fetch(file.apiUrl, {
+    headers: githubHeaders(env),
+    cf: { cacheTtl: 60, cacheEverything: true },
+  });
+  if (!response.ok) throw new Error(`GitHub release asset returned HTTP ${response.status}.`);
+  const headers = new Headers(publicHeaders());
+  headers.set("Content-Type", response.headers.get("content-type") || file.contentType || "application/octet-stream");
+  headers.set("Content-Length", response.headers.get("content-length") || String(file.size));
+  headers.set("Content-Disposition", `attachment; filename="${file.name}"`);
+  return new Response(request.method === "HEAD" ? null : response.body, { status: 200, headers });
 }
 
 function classifyUserAgent(userAgent) {
@@ -408,7 +440,8 @@ async function handleRequest(request, env, executionContext) {
     if (!requested) return errorResponse("Update asset not found.", 404);
     const file = release.files.find((candidate) => candidate.platform === requested.platform && candidate.name === requested.name);
     if (!file) return errorResponse("Update asset not found.", 404);
-    if (release.githubLatestRelease && requested.name.endsWith(".yml")) return githubFeedResponse(request, release, file);
+    if (release.githubLatestRelease && requested.name.endsWith(".yml")) return githubFeedResponse(request, env, release, file);
+    if (release.githubLatestRelease && env.GITHUB_TOKEN) return githubAssetResponse(request, env, file);
     return redirect(file.url);
   }
   if (path !== "/get" && path !== "/") return errorResponse("Not found.", 404);
@@ -420,6 +453,7 @@ async function handleRequest(request, env, executionContext) {
     return errorResponse(`The published release does not contain a ${format ? `${format} ` : ""}${platform} installer.`, 404);
   }
   trackDownloadRequest(env, request, executionContext, release, { platform: installer.platform, file: installer.name, outcome: "redirect", status: 302 });
+  if (release.githubLatestRelease && env.GITHUB_TOKEN) return githubAssetResponse(request, env, installer);
   return redirect(installer.url);
 }
 
