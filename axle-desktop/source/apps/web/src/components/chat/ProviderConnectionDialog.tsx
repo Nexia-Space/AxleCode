@@ -22,9 +22,9 @@ export function ProviderConnectionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-md">
-        <DialogHeader>
-          <div className="mb-1 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <PlugZapIcon className="size-5" aria-hidden />
+        <DialogHeader className="items-center text-center">
+          <div className="mb-2 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <PlugZapIcon className="size-8" aria-hidden />
           </div>
           <DialogTitle>Connect a provider to start chatting</DialogTitle>
           <DialogDescription>
