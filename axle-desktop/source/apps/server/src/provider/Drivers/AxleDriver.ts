@@ -335,20 +335,28 @@ export const AxleDriver: ProviderDriver<
         !binaryPath.includes("/") && !binaryPath.includes("\\")
           ? true
           : NodeFS.existsSync(binaryPath);
-      const loadSnapshot = Effect.promise(() => discoverAxleModels(processEnvironment)).pipe(
-        Effect.map((discovery) =>
-          makeSnapshot({
-            instanceId,
-            displayName: displayName ?? "Axle",
-            ...(accentColor ? { accentColor } : {}),
-            continuationKey: continuationIdentity.continuationKey,
-            enabled,
-            binaryInstalled,
-            binaryPath,
-            discovery,
-          }),
-        ),
-      );
+      const loadSnapshot = Effect.gen(function* () {
+        // Settings can change while the driver remains alive. Re-read the
+        // instance environment for every refresh so custom-provider toggles
+        // immediately affect discovery and survive app restarts.
+        const latestSettings = yield* serverSettings.getSettings;
+        const latestEnvironment = latestSettings.providerInstances[instanceId]?.environment;
+        const discoveryEnvironment = {
+          ...mergeProviderInstanceEnvironment(latestEnvironment ?? environment),
+          AXLE_LOCAL_MODELS_STATE_PATH: serverConfig.localModelsStatePath,
+        };
+        const discovery = yield* Effect.promise(() => discoverAxleModels(discoveryEnvironment));
+        return makeSnapshot({
+          instanceId,
+          displayName: displayName ?? "Axle",
+          ...(accentColor ? { accentColor } : {}),
+          continuationKey: continuationIdentity.continuationKey,
+          enabled,
+          binaryInstalled,
+          binaryPath,
+          discovery,
+        });
+      });
       const snapshotValue = yield* loadSnapshot;
       const snapshotRef = yield* Ref.make(snapshotValue);
       const snapshotChanges = yield* PubSub.sliding<ServerProvider>(1);
