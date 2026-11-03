@@ -6,7 +6,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogPanel,
   DialogPopup,
   DialogTitle,
 } from "../ui/dialog";
@@ -29,14 +28,10 @@ export function ProviderConnectionDialog({
           </div>
           <DialogTitle>Connect a provider to start chatting</DialogTitle>
           <DialogDescription>
-            Axle no longer ships with a default model. Connect your own provider or local model in
-            Settings, then come back here to start a conversation.
+            Connect your provider or local model in Settings, then come back here to start a
+            conversation.
           </DialogDescription>
         </DialogHeader>
-        <DialogPanel className="rounded-xl bg-muted/35 px-4 py-3 text-sm text-muted-foreground">
-          Your keys stay in your Axle environment. You can connect OpenAI, Claude, Gemini,
-          OpenRouter, Ollama, or any compatible endpoint.
-        </DialogPanel>
         <DialogFooter>
           <Button
             type="button"
