@@ -46,13 +46,6 @@ export const PROVIDER_PRESETS: ReadonlyArray<ProviderPreset> = [
     docsUrl: "https://agentrouter.org",
   },
   {
-    id: "nvidia-nim",
-    label: "NVIDIA NIM",
-    hosts: ["integrate.api.nvidia.com"],
-    apiKeyHint: "NVIDIA_API_KEY",
-    docsUrl: "https://build.nvidia.com",
-  },
-  {
     id: "deepseek",
     label: "DeepSeek",
     hosts: ["api.deepseek.com"],
