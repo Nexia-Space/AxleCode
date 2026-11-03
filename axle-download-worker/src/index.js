@@ -215,6 +215,7 @@ async function loadManifest(env) {
           accept: "application/vnd.github+json",
           "user-agent": "Axle-download-worker",
           "x-github-api-version": "2022-11-28",
+          ...(env.GITHUB_TOKEN ? { authorization: `Bearer ${env.GITHUB_TOKEN}` } : {}),
         },
         cf: { cacheTtl: 60, cacheEverything: true },
       });
