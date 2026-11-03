@@ -2350,6 +2350,7 @@ function ChatViewContent(props: ChatViewProps) {
     activeThreadKey !== null && dockedDraftHeroThreadKey === activeThreadKey;
   const isDraftHeroState =
     isLocalDraftThread && timelineEntries.length === 0 && !isWorking && !draftHeroDockRequested;
+  const [providerConnectionDialogOpen, setProviderConnectionDialogOpen] = useState(false);
   const [
     attachDraftHeroTransitionGroupRef,
     attachDraftHeroComposerAnchorRef,
@@ -5572,9 +5573,10 @@ function ChatViewContent(props: ChatViewProps) {
         <ProviderStatusBanner status={activeProviderStatus} />
         <ProviderConnectionDialog
           open={
-            isDraftHeroState &&
-            activeEnvironmentBootstrapComplete &&
-            providerStatuses.every((status) => !status.enabled || status.models.length === 0)
+            providerConnectionDialogOpen ||
+            (isDraftHeroState &&
+              activeEnvironmentBootstrapComplete &&
+              providerStatuses.every((status) => !status.enabled || status.models.length === 0))
           }
         />
         <ThreadErrorBanner
@@ -5835,6 +5837,7 @@ function ChatViewContent(props: ChatViewProps) {
                           onChangeActivePendingUserInputCustomAnswer
                         }
                         onProviderModelSelect={onProviderModelSelect}
+                        onConnectProvider={() => setProviderConnectionDialogOpen(true)}
                         {...(routeKind === "server"
                           ? {
                               onRefreshModelCatalog: (instanceId: ProviderInstanceId) =>

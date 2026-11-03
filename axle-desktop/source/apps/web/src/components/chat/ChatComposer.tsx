@@ -111,6 +111,7 @@ import {
   CheckIcon,
   CircleAlertIcon,
   ListTodoIcon,
+  PlugZapIcon,
   PencilRulerIcon,
   type LucideIcon,
   LockIcon,
@@ -541,6 +542,7 @@ export interface ChatComposerProps {
   ) => void;
   onProviderModelSelect: (instanceId: ProviderInstanceId, model: string) => void;
   onRefreshModelCatalog?: (instanceId: ProviderInstanceId) => Promise<unknown>;
+  onConnectProvider: () => void;
   getModelDisabledReason: (instanceId: ProviderInstanceId, model: string) => string | null;
   toggleInteractionMode: () => void;
   handleRuntimeModeChange: (mode: RuntimeMode) => void;
@@ -910,6 +912,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       prompt,
     ],
   );
+  const canSendMessage = hasAvailableModelOptions && composerSendState.hasSendableContent;
 
   const activeComposerTrigger = composerTrigger;
   const composerTriggerKind = activeComposerTrigger?.kind ?? null;
@@ -1124,7 +1127,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     isConnecting ||
     projectSelectionRequired ||
     environmentUnavailable !== null ||
-    !composerSendState.hasSendableContent;
+    !canSendMessage;
   const collapsedComposerPrimaryActionLabel = "Send message";
   const showMobilePendingAnswerActions =
     isMobileViewport && !isComposerCollapsedMobile && pendingPrimaryAction !== null;
@@ -1662,6 +1665,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
 
   const submitComposer = useCallback(
     (event?: { preventDefault: () => void }) => {
+      if (!hasAvailableModelOptions) {
+        event?.preventDefault();
+        return;
+      }
       if (lockedAxleModelSlugs.has(selectedModel)) {
         event?.preventDefault();
         openUpgradeDialog("models");
@@ -1672,6 +1679,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     },
     [
       blurMobileComposerAfterSend,
+      hasAvailableModelOptions,
       lockedAxleModelSlugs,
       onSend,
       selectedModel,
@@ -2409,7 +2417,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                                 ? "Ask for follow-up changes or attach images"
                                 : "Ask Axle to build, fix, or explore anything…"
                 }
-                disabled={isConnecting || isComposerApprovalState || projectSelectionRequired}
+                disabled={
+                  isConnecting ||
+                  isComposerApprovalState ||
+                  projectSelectionRequired ||
+                  !hasAvailableModelOptions
+                }
               />
               {showMobilePendingAnswerActions ? (
                 <div
@@ -2464,7 +2477,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   cwd={gitCwd}
                   workspaceContextEnabled={workspaceContextEnabled}
                   interactionMode={interactionMode}
-                  disabled={isConnecting || isComposerApprovalState || projectSelectionRequired}
+                  disabled={
+                    isConnecting ||
+                    isComposerApprovalState ||
+                    projectSelectionRequired ||
+                    !hasAvailableModelOptions
+                  }
                   onOpenPicker={openComposerPathPicker}
                   onPlanMode={() => {
                     if (interactionMode !== "plan") {
@@ -2548,7 +2566,19 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     getModelDisabledReason={getModelDisabledReason}
                     onInstanceModelChange={onProviderModelSelect}
                   />
-                ) : null}
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 shrink-0 gap-1.5 rounded-full px-3 text-muted-foreground hover:text-foreground"
+                    onClick={props.onConnectProvider}
+                    aria-label="Connect a provider"
+                  >
+                    <PlugZapIcon className="size-4" aria-hidden />
+                    <span className="hidden sm:inline">Connect provider</span>
+                  </Button>
+                )}
                 <ComposerFooterPrimaryActions
                   compact={isComposerPrimaryActionsCompact}
                   activeContextWindow={null}
@@ -2563,7 +2593,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     environmentUnavailable !== null || projectSelectionRequired
                   }
                   isPreparingWorktree={isPreparingWorktree}
-                  hasSendableContent={composerSendState.hasSendableContent}
+                  hasSendableContent={canSendMessage}
                   preserveComposerFocusOnPointerDown={isMobileViewport}
                   onPreviousPendingQuestion={onPreviousActivePendingUserInputQuestion}
                   onInterrupt={handleInterruptPrimaryAction}
