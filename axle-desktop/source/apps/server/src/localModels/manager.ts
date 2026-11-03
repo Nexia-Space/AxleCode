@@ -736,9 +736,19 @@ export class LocalModelManager {
         "--jinja",
         ...(mmproj ? ["--mmproj", mmproj] : []),
       ];
+      const runtimeEnvironment: NodeJS.ProcessEnv = {
+        ...process.env,
+        LLAMA_SERVER_NO_WEBUI: "1",
+      };
+      if (process.platform === "linux") {
+        const runtimeLibraryPath = NodePath.dirname(binary);
+        runtimeEnvironment.LD_LIBRARY_PATH = [runtimeLibraryPath, process.env.LD_LIBRARY_PATH]
+          .filter((value): value is string => Boolean(value))
+          .join(NodePath.delimiter);
+      }
       const child = NodeChildProcess.spawn(binary, args, {
         cwd: this.packDir(pack),
-        env: { ...process.env, LLAMA_SERVER_NO_WEBUI: "1" },
+        env: runtimeEnvironment,
         windowsHide: true,
         shell: false,
         stdio: ["ignore", "pipe", "pipe"],

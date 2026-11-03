@@ -214,6 +214,8 @@ async function copyDirectory(source, destination) {
     const to = NodePath.join(destination, entry.name);
     if (entry.isDirectory()) {
       await copyDirectory(from, to);
+    } else if (entry.isSymbolicLink()) {
+      await NodeFSP.symlink(await NodeFSP.readlink(from), to);
     } else if (entry.isFile()) {
       await NodeFSP.copyFile(from, to);
     }
