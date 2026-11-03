@@ -516,7 +516,7 @@ export function ModelsSettingsPanel() {
       parsed = new URL(baseUrl);
     } catch {
       setCustomProviderError(
-        "Enter a full base URL, for example https://integrate.api.nvidia.com/v1.",
+        "Enter a full OpenAI-compatible base URL, for example https://api.example.com/v1.",
       );
       return;
     }
@@ -745,7 +745,7 @@ export function ModelsSettingsPanel() {
                   value={customProviderDraft.name}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Provider name, e.g. NVIDIA NIM"
+                  placeholder="Provider name, e.g. My Provider"
                   aria-label="Custom provider name"
                   onChange={(event) =>
                     setCustomProviderDraft((current) => ({ ...current, name: event.target.value }))
@@ -772,7 +772,7 @@ export function ModelsSettingsPanel() {
                   value={customProviderDraft.baseUrl}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Base URL, e.g. https://integrate.api.nvidia.com/v1"
+                  placeholder="Base URL, e.g. https://api.example.com/v1"
                   aria-label="Custom provider base URL"
                   onChange={(event) =>
                     setCustomProviderDraft((current) => ({

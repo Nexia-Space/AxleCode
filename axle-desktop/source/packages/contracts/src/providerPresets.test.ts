@@ -14,12 +14,10 @@ describe("resolveProviderPreset", () => {
   it("matches a base URL on hostname, ignoring the scheme, port and path", () => {
     expect(resolveProviderPreset("https://agentrouter.org/v1")?.id).toBe("agent-router");
     expect(resolveProviderPreset("http://AgentRouter.org:8080/v1")?.id).toBe("agent-router");
-    expect(resolveProviderPreset("https://integrate.api.nvidia.com/v1")).toBeUndefined();
   });
 
   it("returns nothing for an unknown host or a value that is not a URL", () => {
     expect(resolveProviderPreset("https://example.invalid/v1")).toBeUndefined();
-    expect(resolveProviderPreset("integrate.api.nvidia.com/v1")).toBeUndefined();
     expect(resolveProviderPreset("")).toBeUndefined();
   });
 

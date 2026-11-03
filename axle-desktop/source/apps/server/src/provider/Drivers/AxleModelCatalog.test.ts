@@ -941,7 +941,7 @@ describe("discoverAxleModels", () => {
     ]);
   });
 
-  it("discovers a provider the user brought as a base URL and key pair", async () => {
+  it("discovers a user-provided OpenAI-compatible endpoint", async () => {
     const requests: Array<{ url: string; authorization: string | null }> = [];
     const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
@@ -949,29 +949,27 @@ describe("discoverAxleModels", () => {
         url,
         authorization: new Headers(init?.headers).get("authorization"),
       });
-      if (url === "https://integrate.api.nvidia.com/v1/models") {
-        return jsonResponse({ data: [{ id: "meta/llama-3.1-70b-instruct" }] });
+      if (url === "https://api.example.com/v1/models") {
+        return jsonResponse({ data: [{ id: "example-model" }] });
       }
       return jsonResponse({});
     }) as typeof fetch;
 
     const result = await discoverAxleModels(
       {
-        NVIDIA_NIM_BASE_URL: "https://integrate.api.nvidia.com/v1/",
-        NVIDIA_NIM_API_KEY: "nvapi-secret",
-        NVIDIA_NIM_LABEL: "NVIDIA NIM",
+        EXAMPLE_PROVIDER_BASE_URL: "https://api.example.com/v1/",
+        EXAMPLE_PROVIDER_API_KEY: "example-secret",
+        EXAMPLE_PROVIDER_LABEL: "Example Provider",
       },
       fetchImplementation,
     );
 
     // The trailing slash is trimmed before the `/models` join, and the
     // provider's own key authenticates the probe.
-    const probe = requests.find(
-      (request) => request.url === "https://integrate.api.nvidia.com/v1/models",
-    );
-    expect(probe?.authorization).toBe("Bearer nvapi-secret");
+    const probe = requests.find((request) => request.url === "https://api.example.com/v1/models");
+    expect(probe?.authorization).toBe("Bearer example-secret");
     expect(result.models.map((model) => [model.slug, model.subProvider])).toEqual([
-      ["nvidia-nim/meta/llama-3.1-70b-instruct", "NVIDIA NIM"],
+      ["example-provider/example-model", "Example Provider"],
     ]);
     expect(result.configuredProviderCount).toBe(withBuiltInAxleProvider(1));
   });

@@ -742,9 +742,9 @@ const CUSTOM_BASE_URL_VARIABLE = /^([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)_BASE_URL$/u;
 const isLocalhostUrl = (url: string): boolean => /localhost|127\.0\.0\.1|\[::1\]/u.test(url);
 
 interface CustomProviderDefinition {
-  /** Environment variable prefix, for example `NVIDIA_NIM`. */
+  /** Environment variable prefix, for example `MY_PROVIDER`. */
   readonly envPrefix: string;
-  /** Model slug prefix, for example `nvidia-nim`. */
+  /** Model slug prefix, for example `my-provider`. */
   readonly prefix: string;
   readonly label: string;
   readonly baseUrl: string;

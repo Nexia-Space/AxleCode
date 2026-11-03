@@ -52,13 +52,13 @@ describe("mergeProviderInstanceEnvironment", () => {
       mergeProviderInstanceEnvironment(
         [
           {
-            name: "NVIDIA_NIM_BASE_URL",
-            value: "https://integrate.api.nvidia.com/v1",
+            name: "EXAMPLE_PROVIDER_BASE_URL",
+            value: "https://api.example.com/v1",
             sensitive: false,
           },
         ],
         baseEnv,
-      ).NVIDIA_NIM_HEADERS,
+      ).EXAMPLE_PROVIDER_HEADERS,
     ).toBeUndefined();
   });
 });
