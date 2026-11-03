@@ -5712,7 +5712,10 @@ function ChatViewContent(props: ChatViewProps) {
                       className="relative z-10 mx-auto w-full max-w-[56rem]"
                     >
                       {workspaceContextEnabled && isGitRepo ? (
-                        <div className="mx-3" data-chat-composer-context-bar="true">
+                        <div
+                          className="mx-auto w-full max-w-[42rem]"
+                          data-chat-composer-context-bar="true"
+                        >
                           <BranchToolbar
                             environmentId={activeThread.environmentId}
                             threadId={activeThread.id}
@@ -5742,7 +5745,7 @@ function ChatViewContent(props: ChatViewProps) {
                       ) : (
                         <div
                           data-chat-composer-context-bar="true"
-                          className="mx-3 flex min-h-11 items-center gap-3 rounded-t-2xl bg-[var(--composer-context-background)] px-3 pb-1 text-xs font-medium text-foreground/80"
+                          className="mx-auto flex min-h-10 w-full max-w-[42rem] items-center gap-2 rounded-t-xl bg-[var(--composer-context-background)] px-2.5 pb-1 text-[11px] font-medium text-foreground/80"
                         >
                           <ComposerProjectPicker
                             activeProjectRef={activeProject ? activeProjectRef : null}
