@@ -22,7 +22,6 @@ import {
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./threadSidebarWidth";
 import { Sidebar, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } from "./ui/sidebar";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "90px";
 
@@ -45,7 +44,7 @@ function readInitialThreadSidebarWidth(): number {
 
 function SidebarControl() {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { setOpen, toggleSidebar } = useSidebar();
+  const { toggleSidebar } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle");
 
   useEffect(() => {
@@ -70,26 +69,14 @@ function SidebarControl() {
 
   return (
     <div
-      className="pointer-events-auto fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-[100] flex h-[var(--workspace-topbar-height)] items-center"
+      className="pointer-events-none fixed left-[var(--workspace-controls-left)] top-[var(--workspace-controls-top)] z-[100] flex h-[var(--workspace-topbar-height)] items-center"
       data-sidebar-control=""
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <SidebarTrigger
-              className="pointer-events-auto rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Toggle main sidebar"
-              onClick={(event) => {
-                event.preventDefault();
-                setOpen((currentOpen) => !currentOpen);
-              }}
-            />
-          }
-        />
-        <TooltipPopup side="bottom">
-          Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
-        </TooltipPopup>
-      </Tooltip>
+      <SidebarTrigger
+        className="pointer-events-auto rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Toggle main sidebar"
+        title={`Toggle main sidebar${shortcutLabel ? ` (${shortcutLabel})` : ""}`}
+      />
     </div>
   );
 }
