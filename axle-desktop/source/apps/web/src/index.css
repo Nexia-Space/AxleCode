@@ -80,6 +80,36 @@ html[data-mobile-composer-route-transition="true"]::view-transition-new(t3-mobil
   }
 }
 
+@keyframes agent-response-glimmer {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: -50% 50%;
+  }
+}
+
+.agent-response-glimmer {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, currentcolor 58%, transparent) 20%,
+    currentcolor 48%,
+    color-mix(in srgb, currentcolor 58%, transparent) 76%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: agent-response-glimmer 1.7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-response-glimmer {
+    animation: none;
+    background-image: none;
+    color: inherit;
+  }
+}
+
 html[data-mobile-composer-route-transition="true"]::view-transition-group(t3-mobile-draft-headline) {
   animation-duration: 130ms;
 }

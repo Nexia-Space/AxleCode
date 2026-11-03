@@ -1247,7 +1247,7 @@ function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "workin
     <div className="py-0.5 pl-1.5">
       <div className="flex items-center gap-2 pt-1 text-[11px] text-muted-foreground/70 tabular-nums">
         <WorkingOrb />
-        <span>
+        <span className="agent-response-glimmer">
           {row.createdAt ? (
             <>
               Working for <WorkingTimer createdAt={row.createdAt} />

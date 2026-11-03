@@ -4472,6 +4472,7 @@ function ChatViewContent(props: ChatViewProps) {
     }
 
     sendInFlightRef.current = true;
+    beginLocalDispatch({ preparingWorktree: Boolean(baseBranchForWorktree) });
     if (isDraftHeroState && activeThreadKey) {
       let resolveDockStarted: (() => void) | undefined;
       const dockStarted = new Promise<void>((resolve) => {
@@ -4487,8 +4488,6 @@ function ChatViewContent(props: ChatViewProps) {
       void dockTransition.catch(() => resolveDockStarted?.());
       await dockStarted;
     }
-    beginLocalDispatch({ preparingWorktree: Boolean(baseBranchForWorktree) });
-
     const composerImagesSnapshot = [...composerImages];
     const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
     const composerElementContextsSnapshot = [...composerElementContexts];
