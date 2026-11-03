@@ -446,6 +446,13 @@ async function handleRequest(request, env, executionContext) {
     // user-initiated installer calls, so keep them out of download analytics.
     const requested = updateRequest(path);
     if (!requested) return errorResponse("Update asset not found.", 404);
+    // GitHub's private asset redirect supports single byte ranges but not the
+    // multipart ranges used by electron-updater's differential downloader.
+    // Returning 404 for the optional blockmap makes electron-updater use its
+    // reliable full-download fallback through the signed installer URL.
+    if (release.githubLatestRelease && requested.name.endsWith(".blockmap")) {
+      return errorResponse("Differential update metadata is unavailable.", 404);
+    }
     const file = release.files.find((candidate) => candidate.platform === requested.platform && candidate.name === requested.name);
     if (!file) return errorResponse("Update asset not found.", 404);
     if (release.githubLatestRelease && requested.name.endsWith(".yml")) return githubFeedResponse(request, env, release, file);
