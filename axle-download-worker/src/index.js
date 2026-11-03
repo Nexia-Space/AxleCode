@@ -357,8 +357,11 @@ async function githubAssetResponse(request, env, file) {
   const range = request.headers.get("Range");
   const response = await fetch(file.apiUrl, {
     headers: { ...githubHeaders(env), ...(range ? { Range: range } : {}) },
+    redirect: "manual",
     cf: { cacheTtl: 60, cacheEverything: true },
   });
+  const location = response.headers.get("Location");
+  if (location && response.status >= 300 && response.status < 400) return redirect(location);
   if (!response.ok) throw new Error(`GitHub release asset returned HTTP ${response.status}.`);
   const headers = new Headers(publicHeaders());
   headers.set("Content-Type", response.headers.get("content-type") || file.contentType || "application/octet-stream");
