@@ -327,7 +327,11 @@ function githubHeaders(env, accept = "application/octet-stream") {
 
 function workerAssetUrl(request, file) {
   const url = new URL(request.url);
-  const path = file.platform === "windows-x64" ? `windows/x64/${encodeURIComponent(file.name)}` : `${file.platform.replace("-", "/")}/${encodeURIComponent(file.name)}`;
+  const path = file.platform === "windows-x64"
+    ? `windows/x64/${encodeURIComponent(file.name)}`
+    : file.platform === "linux-x64"
+      ? `linux/${encodeURIComponent(file.name)}`
+      : `${file.platform.replace("-", "/")}/${encodeURIComponent(file.name)}`;
   url.pathname = `/get/updates/${path}`;
   url.search = "";
   return url.href;
