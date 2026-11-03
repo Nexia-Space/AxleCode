@@ -349,13 +349,14 @@ async function githubFeedResponse(request, env, release, feedFile) {
   if (rewrittenUrls === 0) throw new Error(`GitHub update feed ${feedFile.name} contains no downloadable files.`);
   return new Response(request.method === "HEAD" ? null : pinnedFeed, {
     status: 200,
-    headers: { ...publicHeaders(), "Content-Type": response.headers.get("content-type") || "text/yaml; charset=utf-8" },
+    headers: { ...publicHeaders(), "Content-Type": "text/yaml; charset=utf-8" },
   });
 }
 
 async function githubAssetResponse(request, env, file) {
+  const range = request.headers.get("Range");
   const response = await fetch(file.apiUrl, {
-    headers: githubHeaders(env),
+    headers: { ...githubHeaders(env), ...(range ? { Range: range } : {}) },
     cf: { cacheTtl: 60, cacheEverything: true },
   });
   if (!response.ok) throw new Error(`GitHub release asset returned HTTP ${response.status}.`);
@@ -363,7 +364,11 @@ async function githubAssetResponse(request, env, file) {
   headers.set("Content-Type", response.headers.get("content-type") || file.contentType || "application/octet-stream");
   headers.set("Content-Length", response.headers.get("content-length") || String(file.size));
   headers.set("Content-Disposition", `attachment; filename="${file.name}"`);
-  return new Response(request.method === "HEAD" ? null : response.body, { status: 200, headers });
+  for (const name of ["accept-ranges", "content-range", "etag", "last-modified"]) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(request.method === "HEAD" ? null : response.body, { status: response.status, headers });
 }
 
 function classifyUserAgent(userAgent) {
