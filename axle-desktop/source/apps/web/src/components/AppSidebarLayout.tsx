@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import * as Schema from "effect/Schema";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import { isElectron } from "../env";
@@ -9,11 +9,6 @@ import { resolveShortcutCommand, shortcutLabelForCommand } from "../keybindings"
 import { isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { DesktopUpdateBanner } from "./DesktopUpdateBanner";
-import {
-  resolveSidebarEdgePointerAction,
-  resolveSidebarEdgePress,
-  SIDEBAR_EDGE_REVEAL_CLOSE_DELAY_MS,
-} from "./AppSidebarLayout.logic";
 import ThreadSidebar from "./Sidebar";
 import {
   resolveInitialThreadSidebarWidth,
@@ -26,30 +21,6 @@ import { Sidebar, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } fro
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "90px";
-
-/**
- * The open sidebar slides in from the left edge and slides back off-screen when
- * collapsed, so its measured width is also the x range the open sidebar covers.
- */
-function resolveOpenSidebarFootprint(): number {
-  const container = document.querySelector<HTMLElement>("[data-slot='sidebar-container']");
-  return container?.getBoundingClientRect().width ?? 0;
-}
-
-function isInsideSidebarTitlebar(clientY: number): boolean {
-  const control = document.querySelector<HTMLElement>("[data-sidebar-control]");
-  if (!control) return false;
-  const { top, bottom } = control.getBoundingClientRect();
-  return clientY >= top && clientY < bottom;
-}
-
-function isInsideSidebarChrome(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    (target.closest("[data-slot='sidebar-container']") !== null ||
-      target.closest("[data-sidebar-control]") !== null)
-  );
-}
 
 function readInitialThreadSidebarWidth(): number {
   try {
@@ -112,109 +83,6 @@ function SidebarControl() {
       </Tooltip>
     </div>
   );
-}
-
-/**
- * Reveals the collapsed off-canvas sidebar when the pointer reaches the left
- * window edge, and hides it again once the pointer leaves both the edge and the
- * sidebar. Pointer events are tracked from the window instead of an overlay, so
- * nothing covers the app content or the native scrollbar at that edge.
- */
-function SidebarEdgeReveal() {
-  const { isMobile, open, setOpen } = useSidebar();
-  const revealedByHoverRef = useRef(false);
-
-  useEffect(() => {
-    if (isMobile) return;
-
-    let closeTimer: number | null = null;
-
-    const clearCloseTimer = () => {
-      if (closeTimer === null) return;
-      window.clearTimeout(closeTimer);
-      closeTimer = null;
-    };
-
-    const scheduleClose = () => {
-      if (closeTimer !== null) return;
-      closeTimer = window.setTimeout(() => {
-        closeTimer = null;
-        revealedByHoverRef.current = false;
-        setOpen(false);
-      }, SIDEBAR_EDGE_REVEAL_CLOSE_DELAY_MS);
-    };
-
-    const reveal = () => {
-      revealedByHoverRef.current = true;
-      setOpen(true);
-    };
-
-    const onPointerMove = (event: PointerEvent) => {
-      const action = resolveSidebarEdgePointerAction({
-        clientX: event.clientX,
-        insideTitlebar: isInsideSidebarTitlebar(event.clientY),
-        open,
-        revealedByHover: revealedByHoverRef.current,
-        sidebarWidth: resolveOpenSidebarFootprint(),
-      });
-      if (action === "reveal") {
-        reveal();
-      } else if (action === "hold") {
-        clearCloseTimer();
-      } else if (action === "schedule-close") {
-        scheduleClose();
-      }
-    };
-
-    // A press on the collapsed edge is the sidebar's "open" handle: the rail
-    // cannot serve as one while it keeps pointer events disabled. Pressing the
-    // sidebar or its toggle keeps a hover reveal on screen instead.
-    const onPointerDown = (event: PointerEvent) => {
-      const action = resolveSidebarEdgePress({
-        button: event.button,
-        clientX: event.clientX,
-        insideSidebarChrome: isInsideSidebarChrome(event.target),
-        insideTitlebar: isInsideSidebarTitlebar(event.clientY),
-        open,
-        revealedByHover: revealedByHoverRef.current,
-      });
-      if (action === "ignore") {
-        return;
-      }
-      clearCloseTimer();
-      revealedByHoverRef.current = false;
-      if (action === "open") {
-        setOpen(true);
-      }
-    };
-
-    // Leaving the window also means leaving the sidebar.
-    const onPointerLeaveWindow = () => {
-      if (open && revealedByHoverRef.current) {
-        scheduleClose();
-      }
-    };
-
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    window.addEventListener("pointerdown", onPointerDown, true);
-    document.documentElement.addEventListener("pointerleave", onPointerLeaveWindow);
-    return () => {
-      clearCloseTimer();
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerdown", onPointerDown, true);
-      document.documentElement.removeEventListener("pointerleave", onPointerLeaveWindow);
-    };
-  }, [isMobile, open, setOpen]);
-
-  // A closed sidebar is no longer a hover reveal, so the next edge hover starts
-  // a fresh one.
-  useEffect(() => {
-    if (!open) {
-      revealedByHoverRef.current = false;
-    }
-  }, [open]);
-
-  return null;
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
@@ -294,7 +162,6 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <SidebarRail />
       </Sidebar>
       <SidebarControl />
-      <SidebarEdgeReveal />
       {children}
       <DesktopUpdateBanner />
     </SidebarProvider>
