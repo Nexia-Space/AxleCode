@@ -2351,6 +2351,16 @@ function ChatViewContent(props: ChatViewProps) {
   const isDraftHeroState =
     isLocalDraftThread && timelineEntries.length === 0 && !isWorking && !draftHeroDockRequested;
   const [providerConnectionDialogOpen, setProviderConnectionDialogOpen] = useState(false);
+  const noAvailableProviders =
+    isDraftHeroState &&
+    activeEnvironmentBootstrapComplete &&
+    providerStatuses.every((status) => !status.enabled || status.models.length === 0);
+  const [providerConnectionDialogDismissed, setProviderConnectionDialogDismissed] = useState(false);
+  useEffect(() => {
+    if (!noAvailableProviders) {
+      setProviderConnectionDialogDismissed(false);
+    }
+  }, [noAvailableProviders]);
   const [
     attachDraftHeroTransitionGroupRef,
     attachDraftHeroComposerAnchorRef,
@@ -5574,10 +5584,14 @@ function ChatViewContent(props: ChatViewProps) {
         <ProviderConnectionDialog
           open={
             providerConnectionDialogOpen ||
-            (isDraftHeroState &&
-              activeEnvironmentBootstrapComplete &&
-              providerStatuses.every((status) => !status.enabled || status.models.length === 0))
+            (noAvailableProviders && !providerConnectionDialogDismissed)
           }
+          onOpenChange={(open) => {
+            setProviderConnectionDialogOpen(open);
+            if (!open) {
+              setProviderConnectionDialogDismissed(true);
+            }
+          }}
         />
         <ThreadErrorBanner
           error={visibleThreadError}

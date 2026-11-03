@@ -11,11 +11,17 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 
-export function ProviderConnectionDialog({ open }: { readonly open: boolean }) {
+export function ProviderConnectionDialog({
+  open,
+  onOpenChange,
+}: {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+}) {
   const navigate = useNavigate();
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-md">
         <DialogHeader>
           <div className="mb-1 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -32,7 +38,13 @@ export function ProviderConnectionDialog({ open }: { readonly open: boolean }) {
           OpenRouter, Ollama, or any compatible endpoint.
         </DialogPanel>
         <DialogFooter>
-          <Button type="button" onClick={() => void navigate({ to: "/settings/models" })}>
+          <Button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              void navigate({ to: "/settings/models" });
+            }}
+          >
             <Settings2Icon className="size-4" />
             Connect provider
           </Button>
