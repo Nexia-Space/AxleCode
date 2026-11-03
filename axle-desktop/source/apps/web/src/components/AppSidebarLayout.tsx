@@ -65,7 +65,7 @@ function readInitialThreadSidebarWidth(): number {
 
 function SidebarControl() {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const { open, setOpen, toggleSidebar } = useSidebar();
+  const { setOpen, toggleSidebar } = useSidebar();
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle");
 
   useEffect(() => {
@@ -101,7 +101,7 @@ function SidebarControl() {
               aria-label="Toggle main sidebar"
               onClick={(event) => {
                 event.preventDefault();
-                setOpen(!open);
+                setOpen((currentOpen) => !currentOpen);
               }}
             />
           }
