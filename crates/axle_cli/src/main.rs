@@ -326,7 +326,7 @@ fn resolve_provider_and_model(provider: Option<&str>, model: Option<&str>) -> (S
     )
 }
 
-/// Environment variable prefix for a provider id: `nvidia-nim` -> `NVIDIA_NIM`.
+/// Environment variable prefix for a provider id: `example-provider` -> `EXAMPLE_PROVIDER`.
 ///
 /// The desktop stores every provider the user brings themselves as a
 /// `<PREFIX>_BASE_URL` / `<PREFIX>_API_KEY` pair, so the id carried by the
@@ -734,9 +734,8 @@ mod tests {
 
     #[test]
     fn provider_env_prefix_maps_ids_to_variables() {
-        assert_eq!(provider_env_prefix("nvidia-nim"), "NVIDIA_NIM");
-        assert_eq!(provider_env_prefix("nvidia_nim"), "NVIDIA_NIM");
-        assert_eq!(provider_env_prefix("NVIDIA"), "NVIDIA");
+        assert_eq!(provider_env_prefix("example-provider"), "EXAMPLE_PROVIDER");
+        assert_eq!(provider_env_prefix("example_provider"), "EXAMPLE_PROVIDER");
         assert_eq!(provider_env_prefix("my.gateway"), "MY_GATEWAY");
     }
 

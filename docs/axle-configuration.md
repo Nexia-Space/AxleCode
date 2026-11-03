@@ -61,9 +61,10 @@ self-hosted or Axle-hosted OpenAI-compatible endpoint.
 A provider that is not in the table above is declared entirely through the
 environment: set `<PREFIX>_BASE_URL` and `<PREFIX>_API_KEY`, plus optional
 `<PREFIX>_LABEL` for the display name. The id is the lowercased prefix with
-underscores as hyphens, so `NVIDIA_NIM_BASE_URL` and `NVIDIA_NIM_API_KEY`
-produce model slugs like `nvidia-nim/meta/llama-3.1-70b-instruct`, and
-`--provider nvidia-nim` resolves those variables again at generation time.
+underscores as hyphens, so `EXAMPLE_PROVIDER_BASE_URL` and
+`EXAMPLE_PROVIDER_API_KEY` produce model slugs like
+`example-provider/example-model`, and `--provider example-provider` resolves
+those variables again at generation time.
 Hosted endpoints need a key; a localhost endpoint does not.
 
 Prefixes owned by the built-in providers cannot be reused this way. For those,

@@ -30,10 +30,6 @@ const PROVIDER_INFO: Record<string, { name: string; url: string | null }> = {
     name: "FreeTheAI",
     url: "https://api.freetheai.org/v1",
   },
-  "nvidia-nim": {
-    name: "NVIDIA NIM",
-    url: "https://integrate.api.nvidia.com/v1",
-  },
   openai: { name: "OpenAI", url: "https://api.openai.com/v1" },
   anthropic: { name: "Anthropic", url: "https://api.anthropic.com/v1" },
   google: { name: "Google", url: "https://generativelanguage.googleapis.com/v1beta" },
@@ -61,8 +57,6 @@ const PROVIDER_ALIASES: Record<string, string> = {
   agentrouter: "agent-router",
   agent_router: "agent-router",
   "itera-compute": "iteracompute",
-  nvidia: "nvidia-nim",
-  "nvidia_nim": "nvidia-nim",
   "free-the-ai": "freetheai",
   "free_the_ai": "freetheai",
 };
