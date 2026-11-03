@@ -974,6 +974,24 @@ describe("discoverAxleModels", () => {
     expect(result.configuredProviderCount).toBe(withBuiltInAxleProvider(1));
   });
 
+  it("does not discover a disabled user-provided endpoint", async () => {
+    const fetchImplementation = (async () => {
+      throw new Error("disabled providers must not be probed");
+    }) as typeof fetch;
+
+    const result = await discoverAxleModels(
+      {
+        EXAMPLE_PROVIDER_BASE_URL: "https://api.example.com/v1",
+        EXAMPLE_PROVIDER_API_KEY: "example-secret",
+        EXAMPLE_PROVIDER_ENABLED: "false",
+      },
+      fetchImplementation,
+    );
+
+    expect(result.models).toEqual([]);
+    expect(result.configuredProviderCount).toBe(withBuiltInAxleProvider(0));
+  });
+
   it("sends the headers a known endpoint fingerprints on, detected from its base URL", async () => {
     const requests: Array<{ url: string; userAgent: string | null }> = [];
     const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {

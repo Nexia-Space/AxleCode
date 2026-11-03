@@ -773,6 +773,7 @@ function customProviders(environment: NodeJS.ProcessEnv): ReadonlyArray<CustomPr
       const configuredUrl = rawValue?.trim();
       if (!configuredUrl) return [];
       const baseUrl = withoutTrailingSlashes(configuredUrl);
+      if (environment[`${envPrefix}_ENABLED`]?.trim().toLowerCase() === "false") return [];
       const apiKey = environment[`${envPrefix}_API_KEY`]?.trim() ?? "";
       // A hosted endpoint with no credential only answers 401, so it is not
       // worth advertising; a local server legitimately needs no key.

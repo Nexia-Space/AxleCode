@@ -83,7 +83,8 @@ const RESERVED_ENV_PREFIXES: ReadonlySet<string> = new Set([
 
 /**
  * A user-added provider is stored purely as environment variables:
- * `<PREFIX>_BASE_URL`, `<PREFIX>_API_KEY`, `<PREFIX>_LABEL`, plus
+ * `<PREFIX>_BASE_URL`, `<PREFIX>_API_KEY`, `<PREFIX>_LABEL`, and
+ * `<PREFIX>_ENABLED`, plus
  * `<PREFIX>_HEADERS` when the endpoint is one that fingerprinting requires
  * extra request headers from. This pattern is what the server's model
  * discovery scans for, and the derived prefix is also the model slug prefix,
@@ -251,6 +252,7 @@ export function ModelsSettingsPanel() {
         readonly label: string;
         readonly baseUrl: string;
         readonly hasKey: boolean;
+        readonly enabled: boolean;
         readonly headers: ReadonlyArray<readonly [string, string]>;
       }
     >();
@@ -268,6 +270,7 @@ export function ModelsSettingsPanel() {
         label: variables.get(`${envPrefix}_LABEL`)?.value.trim() || envPrefix.replaceAll("_", " "),
         baseUrl,
         hasKey: keyVariable?.valueRedacted === true || Boolean(keyVariable?.value),
+        enabled: variables.get(`${envPrefix}_ENABLED`)?.value.trim().toLowerCase() !== "false",
         // What is actually sent: the provider's own headers when it has them,
         // otherwise whatever its hostname is known to require.
         headers:
@@ -450,6 +453,7 @@ export function ModelsSettingsPanel() {
       readonly label: string;
       readonly baseUrl: string;
       readonly apiKey: string;
+      readonly enabled?: boolean;
       readonly headers?: ReadonlyArray<readonly [string, string]>;
     },
   ) => {
@@ -457,6 +461,7 @@ export function ModelsSettingsPanel() {
       `${envPrefix}_BASE_URL`,
       `${envPrefix}_API_KEY`,
       `${envPrefix}_LABEL`,
+      `${envPrefix}_ENABLED`,
       providerHeadersVariable(envPrefix),
     ]);
     const environment = (instance?.environment ?? []).filter(
@@ -465,6 +470,11 @@ export function ModelsSettingsPanel() {
     if (next.baseUrl.length > 0) {
       environment.push({ name: `${envPrefix}_BASE_URL`, value: next.baseUrl, sensitive: false });
       environment.push({ name: `${envPrefix}_LABEL`, value: next.label, sensitive: false });
+      environment.push({
+        name: `${envPrefix}_ENABLED`,
+        value: next.enabled === false ? "false" : "true",
+        sensitive: false,
+      });
       const headers = next.headers ?? [];
       if (headers.length > 0) {
         environment.push({
@@ -482,6 +492,30 @@ export function ModelsSettingsPanel() {
         });
       }
     }
+    updateSettings({
+      providerInstances: {
+        ...settings.providerInstances,
+        [AXLE_INSTANCE_ID]: {
+          driver: AXLE_DRIVER,
+          displayName: instance?.displayName ?? "OpenAI",
+          enabled: true,
+          environment,
+          config: instance?.config ?? { binaryPath: "" },
+        },
+      },
+    });
+    refreshAfterCredentialsChange();
+  };
+
+  const setCustomProviderEnabled = (envPrefix: string, enabled: boolean) => {
+    const environment = (instance?.environment ?? []).filter(
+      (variable) => variable.name !== `${envPrefix}_ENABLED`,
+    );
+    environment.push({
+      name: `${envPrefix}_ENABLED`,
+      value: enabled ? "true" : "false",
+      sensitive: false,
+    });
     updateSettings({
       providerInstances: {
         ...settings.providerInstances,
@@ -535,6 +569,7 @@ export function ModelsSettingsPanel() {
       label,
       baseUrl,
       apiKey,
+      enabled: true,
       headers: providerPresetHeaders(preset),
     });
     setCustomProviderDraft({ name: "", baseUrl: "", apiKey: "" });
@@ -840,22 +875,32 @@ export function ModelsSettingsPanel() {
                         </p>
                       ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-9 shrink-0 gap-1.5 text-destructive hover:text-destructive"
-                      disabled={!clientSettingsHydrated}
-                      onClick={() =>
-                        writeCustomProvider(provider.envPrefix, {
-                          label: "",
-                          baseUrl: "",
-                          apiKey: "",
-                        })
-                      }
-                    >
-                      <Trash2Icon className="size-3.5" /> Remove
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Switch
+                        checked={provider.enabled}
+                        disabled={!clientSettingsHydrated}
+                        aria-label={`${provider.label} provider ${provider.enabled ? "enabled" : "disabled"}`}
+                        onCheckedChange={(checked) =>
+                          setCustomProviderEnabled(provider.envPrefix, checked)
+                        }
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 gap-1.5 text-destructive hover:text-destructive"
+                        disabled={!clientSettingsHydrated}
+                        onClick={() =>
+                          writeCustomProvider(provider.envPrefix, {
+                            label: "",
+                            baseUrl: "",
+                            apiKey: "",
+                          })
+                        }
+                      >
+                        <Trash2Icon className="size-3.5" /> Remove
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
