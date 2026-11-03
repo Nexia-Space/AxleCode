@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { ADMIN_COOKIE, authenticateAdmin, createAdminSession } from "@/lib/auth";
+import { ADMIN_COOKIE, authenticateAdmin, createAdminSession, isAdminConfigured } from "@/lib/auth";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -11,13 +11,16 @@ export async function POST(request: Request) {
   }
   const username = body !== null && typeof body === "object" && "username" in body && typeof body.username === "string" ? body.username : "";
   const passcode = body !== null && typeof body === "object" && "passcode" in body && typeof body.passcode === "string" ? body.passcode : "";
+  if (!isAdminConfigured()) {
+    return NextResponse.json({ error: "Admin login is not configured on this deployment." }, { status: 503 });
+  }
   if (!authenticateAdmin(username, passcode)) return NextResponse.json({ error: "Incorrect username or passcode." }, { status: 401 });
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE, createAdminSession(), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: new URL(request.url).protocol === "https:",
     path: "/",
     maxAge: 60 * 60 * 12,
   });

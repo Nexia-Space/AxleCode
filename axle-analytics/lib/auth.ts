@@ -18,6 +18,10 @@ export function authenticateAdmin(username: string, passcode: string): boolean {
   return timingSafeEqual(username.trim(), expected.username) && timingSafeEqual(passcode, expected.passcode);
 }
 
+export function isAdminConfigured(): boolean {
+  return credentials().passcode.length > 0;
+}
+
 export function createAdminSession(): string {
   const expected = credentials();
   return sessionToken(expected.username, expected.passcode);

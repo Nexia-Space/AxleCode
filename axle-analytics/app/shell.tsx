@@ -44,7 +44,7 @@ const NAV = [
 async function loadDashboard(): Promise<State> {
   let response: Response;
   try {
-    response = await fetch("/api/dashboard", { cache: "no-store" });
+    response = await fetch("/api/dashboard", { cache: "no-store", credentials: "same-origin" });
   } catch {
     return { status: "error", message: "Could not reach the dashboard API." };
   }
@@ -100,7 +100,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [state.status]);
 
   const handleSignOut = useCallback(() => {
-    void fetch("/api/session", { method: "DELETE" }).then(() => setState({ status: "signed-out" }));
+    void fetch("/api/session", { method: "DELETE", credentials: "same-origin" }).then(() => setState({ status: "signed-out" }));
   }, []);
 
   if (state.status !== "ready") {
@@ -190,6 +190,7 @@ function LoginCard({ onSignedIn }: { onSignedIn: () => void }) {
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ username, passcode }),
       });
       if (!response.ok) {
