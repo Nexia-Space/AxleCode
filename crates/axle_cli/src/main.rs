@@ -33,7 +33,6 @@ const DEFAULT_AXLE_BASE_URL: &str = "https://axle-gateway.axle-download-worker.w
 /// API key still gets a working provider. The hosted gateway hashes any bearer
 /// token into the anonymous identity that carries the free daily credit grant,
 /// and a real `AXLE_API_KEY` always takes precedence over this fallback.
-const DEFAULT_AXLE_API_KEY: &str = "axle-desktop-free";
 
 #[derive(Parser, Debug)]
 #[command(name = "axle")]
@@ -310,19 +309,6 @@ fn configured_base_url(cli_value: Option<&str>, default: &str, variable: &str) -
 /// brought, so it falls back to the built-in token and stays usable before the
 /// user has minted an Axle API key. Any other endpoint is one the user pointed
 /// `AXLE_BASE_URL` at, and that one still needs a key of their own.
-fn resolve_axle_api_key(explicit: Option<&str>, base_url: &str) -> anyhow::Result<String> {
-    match resolve_api_key(explicit, "AXLE_API_KEY") {
-        Ok(key) => Ok(key),
-        Err(error) => {
-            if base_url.trim_end_matches('/') == DEFAULT_AXLE_BASE_URL {
-                Ok(DEFAULT_AXLE_API_KEY.to_string())
-            } else {
-                Err(error)
-            }
-        }
-    }
-}
-
 /// `--agent` naming a specific provider/model wins over the CLI defaults;
 /// either side falls back to the other so both refs stay valid.
 fn resolve_provider_and_model(provider: Option<&str>, model: Option<&str>) -> (String, String) {
@@ -721,7 +707,7 @@ mod tests {
     }
 
     #[test]
-    fn axle_hosted_endpoint_falls_back_to_the_built_in_credential() {
+    fn axle_hosted_endpoint_requires_an_explicit_credential() {
         let saved_axle = env::var("AXLE_API_KEY").ok();
         env::remove_var("AXLE_API_KEY");
         let restore = || match saved_axle.clone() {
@@ -729,30 +715,17 @@ mod tests {
             None => env::remove_var("AXLE_API_KEY"),
         };
 
-        // Axle ships its own provider, so the hosted gateway works with no
-        // key, including when the configured URL carries a trailing slash.
-        assert_eq!(
-            resolve_axle_api_key(None, DEFAULT_AXLE_BASE_URL).unwrap(),
-            DEFAULT_AXLE_API_KEY
-        );
-        assert_eq!(
-            resolve_axle_api_key(None, &format!("{DEFAULT_AXLE_BASE_URL}/")).unwrap(),
-            DEFAULT_AXLE_API_KEY
-        );
-
-        // A self-hosted endpoint is the user's own, and still needs their key.
-        let error = resolve_axle_api_key(None, "https://gateway.example/v1")
-            .expect_err("a self-hosted endpoint must require a key");
+        let error = resolve_api_key(None, "AXLE_API_KEY")
+            .expect_err("Axle must require a connected provider key");
         assert!(error.to_string().contains("AXLE_API_KEY"));
 
-        // An explicit or configured key always beats the fallback.
         assert_eq!(
-            resolve_axle_api_key(Some("axl_test_key"), DEFAULT_AXLE_BASE_URL).unwrap(),
+            resolve_api_key(Some("axl_test_key"), "AXLE_API_KEY").unwrap(),
             "axl_test_key"
         );
         env::set_var("AXLE_API_KEY", "account-key");
         assert_eq!(
-            resolve_axle_api_key(None, DEFAULT_AXLE_BASE_URL).unwrap(),
+            resolve_api_key(None, "AXLE_API_KEY").unwrap(),
             "account-key"
         );
 
@@ -1347,7 +1320,7 @@ async fn main() -> anyhow::Result<()> {
             // the built-in credential instead of refusing to start. Any other
             // endpoint the user pointed AXLE_BASE_URL at is theirs, and still
             // needs a key of their own.
-            let key = resolve_axle_api_key(cli.api_key.as_deref(), &base_url)?;
+            let key = resolve_api_key(cli.api_key.as_deref(), "AXLE_API_KEY")?;
             Arc::new(OpenAiProvider::new_named_with_headers(
                 key,
                 Some(base_url),

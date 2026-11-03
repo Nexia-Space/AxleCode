@@ -697,19 +697,6 @@ async function loadModelsDevCatalog(
  */
 export const AXLE_HOSTED_BASE_URL = "https://axle-gateway.axle-download-worker.workers.dev/v1";
 
-/**
- * The credential Axle's own provider falls back to.
- *
- * Axle's hosted gateway is part of the product rather than a vendor the user
- * brings, so the provider is preconfigured and always available. The gateway
- * derives a stable anonymous identity from any bearer token, and that identity
- * is what the free daily credit grant is attached to; an `axl_...` key from the
- * account page takes precedence and moves the spend onto the signed-in account.
- * The token is deliberately not `axl_`-shaped so it can never be mistaken for,
- * or collide with, a real account key.
- */
-export const AXLE_BUILT_IN_API_KEY = "axle-desktop-free";
-
 const withoutTrailingSlashes = (value: string): string => value.replace(/\/+$/u, "");
 
 /**
