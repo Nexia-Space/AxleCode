@@ -32,7 +32,7 @@ export function ProviderConnectionDialog({
             conversation.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="justify-center">
+        <DialogFooter className="justify-center sm:justify-center">
           <Button
             type="button"
             onClick={() => {
