@@ -470,7 +470,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --success-foreground: #8fc7a3;
     --warning: #d6a05c;
     --warning-foreground: #e3b476;
-    --sidebar: #101014;
+    --sidebar: #0a0a0c;
     --sidebar-foreground: var(--foreground);
     --sidebar-accent: #2b2b2b;
     --sidebar-accent-foreground: var(--color-neutral-100);
