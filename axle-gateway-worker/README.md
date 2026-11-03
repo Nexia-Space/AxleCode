@@ -1,15 +1,15 @@
 # Axle Gateway
 
 The hosted provider behind `axle --provider axle`. It is an OpenAI-compatible
-endpoint that authenticates an `AXLE_API_KEY`, meters the turn in Axle credits,
-and forwards to a single upstream provider key that Axle owns — so every user
-gets working models without configuring a vendor key of their own.
+endpoint that authenticates an `AXLE_API_KEY` and meters turns in Axle credits.
+The hosted model catalog is currently empty until a provider integration is
+explicitly enabled.
 
 ## Routes
 
 | Route | Method | Purpose |
 | --- | --- | --- |
-| `/v1/models` | `GET` | The six Axle models, their plans, and credit rates (the desktop picker) |
+| `/v1/models` | `GET` | The currently enabled hosted models (empty by default) |
 | `/v1/credits` | `GET` | Current balance; renews the free daily grant |
 | `/v1/usage` | `GET` | Recent grants and spends behind the balance |
 | `/v1/chat/completions` | `POST` | Metered chat completion |
@@ -36,26 +36,8 @@ is the payment event id — a redelivered webhook can never double-credit.
 
 ## Models
 
-The six models ship under their real names. `plan` marks which plans may use
-them: `free` models are open to every account, `paid` models require an active
-paid plan (Pro, Pro+, or Ultra) — the gateway asks the account API
-(`ACCOUNT_API_URL` with `INTERNAL_API_TOKEN`), caches the answer for five
-minutes, and fails open when billing is unreachable so an outage can never
-lock a paying user out.
-
-| Model | Upstream (NVIDIA NIM) | Plan | Credits / 1M input | Credits / 1M output |
-| --- | --- | --- | --- | --- |
-| Google Gemma 4 | `google/gemma-4-31b-it` | free | 25 | 100 |
-| Meta Muse Glimmer | `meta/muse-glimmer-30b` | free | 15 | 60 |
-| Nemotron 3.5 Lightning | `nvidia/nemotron-3.5-lightning-30b-a3b` | free | 12 | 50 |
-| GLM 5.3 Flash | `z-ai/glm-5.3-flash` | paid | 30 | 120 |
-| GLM 5.3 | `z-ai/glm-5.3` | paid | 150 | 600 |
-| Nemotron 3 Super | `nvidia/nemotron-3-super-120b-a12b` | paid | 75 | 300 |
-
-Rates are each model's real upstream rate plus a ~20% Axle margin, converted
-at 200 credits per dollar. Rates and upstream ids live in `src/pricing.js`;
-they are data, so the catalog can be re-pointed without touching the gateway
-logic.
+No hosted models are enabled at present. When a provider is deliberately
+enabled, its model and pricing data belong in `src/pricing.js`.
 
 ### How a turn is metered
 
@@ -76,16 +58,12 @@ cd axle-gateway-worker
 wrangler d1 create axle-credits          # paste the id into wrangler.toml
 wrangler d1 execute axle-credits --file=migrations/0001_credits.sql --remote
 wrangler d1 execute axle-credits --file=migrations/0002_credit_buckets.sql --remote
-wrangler secret put UPSTREAM_API_KEY     # the shared upstream key Axle owns
 wrangler secret put INTERNAL_API_TOKEN   # shared with the account API
 wrangler secret put ACCOUNT_API_URL     # e.g. https://axle-account.axle-download-worker.workers.dev
 wrangler deploy
 ```
 
-`UPSTREAM_BASE_URL` defaults to NVIDIA NIM
-(`https://integrate.api.nvidia.com/v1`), the endpoint the Axle models are
-served from; point it at any OpenAI-compatible endpoint to re-host. This
-deployment lives at
+This deployment lives at
 `https://axle-gateway.axle-download-worker.workers.dev`, which is the default
 `--provider axle` base URL, so the desktop app reaches it with no configuration.
 

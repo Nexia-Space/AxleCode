@@ -11,9 +11,6 @@ import {
 import { D1CreditsStore } from "./stores/d1.js";
 import { MemoryCreditsStore } from "./stores/memory.js";
 
-// Axle's hosted upstream: NVIDIA NIM, reached with the shared key Axle
-// installs as the `UPSTREAM_API_KEY` secret.
-const DEFAULT_UPSTREAM_BASE_URL = "https://integrate.api.nvidia.com/v1";
 const RESERVE_MIN_OUTPUT_TOKENS = 256;
 const RESERVE_DEFAULT_OUTPUT_TOKENS = 4096;
 const CHARS_PER_TOKEN = 4;
@@ -102,7 +99,7 @@ export async function resolveUserId(request, env, ctx) {
 
 function upstreamConfig(env) {
   return {
-    baseUrl: (env?.UPSTREAM_BASE_URL || DEFAULT_UPSTREAM_BASE_URL).replace(/\/+$/u, ""),
+    baseUrl: (env?.UPSTREAM_BASE_URL || "").replace(/\/+$/u, ""),
     apiKey: env?.UPSTREAM_API_KEY || env?.OPENROUTER_API_KEY || "",
   };
 }

@@ -2,88 +2,24 @@
 //
 // 100 credits == $0.50, so one credit is worth half a cent ($1 == 200 credits).
 // Every user gets 100 free credits per UTC day; top-ups and plan grants add
-// more. Credit rates below are each model's real upstream (NVIDIA NIM) rate
-// with a ~20% Axle margin on top, converted at 200 credits per dollar.
+// more. The hosted catalog is intentionally empty until Axle has a provider
+// integration that is explicitly enabled for production.
 
 export const CREDIT_USD = 0.005;
 export const CREDITS_PER_DOLLAR = 1 / CREDIT_USD;
 export const DAILY_FREE_CREDITS = 100;
 
 /**
- * The models Axle ships on its hosted provider, under their real names.
- * `upstream` is the model id sent to the upstream OpenAI-compatible endpoint
- * (NVIDIA NIM, configured by `UPSTREAM_BASE_URL`); it is deliberately data,
- * not code, so the catalog can be re-pointed without touching the gateway
- * logic.
+ * Models Axle ships on its hosted provider. This remains a data catalogue so
+ * a future provider can be added deliberately; no provider is enabled today.
  *
- * `plan` marks which plans may use the model: `free` models are available to
- * every account, `paid` models require an active paid plan (Pro, Pro+, or
- * Ultra). `tier` is a display/sort hint only.
+ * `plan` marks which plans may use a model: `free` models are available to
+ * every account, `paid` models require an active paid plan. `tier` is a
+ * display/sort hint only.
  *
  * `creditsPerMillion*` prices are per 1,000,000 tokens.
  */
-export const AXLE_MODELS = Object.freeze([
-  {
-    id: "gemma-4",
-    label: "Google Gemma 4",
-    tier: 1,
-    plan: "free",
-    upstream: "google/gemma-4-31b-it",
-    creditsPerMillionInput: 25,
-    creditsPerMillionOutput: 100,
-    contextWindow: 128_000,
-  },
-  {
-    id: "muse-glimmer",
-    label: "Meta Muse Glimmer",
-    tier: 2,
-    plan: "free",
-    upstream: "meta/muse-glimmer-30b",
-    creditsPerMillionInput: 15,
-    creditsPerMillionOutput: 60,
-    contextWindow: 128_000,
-  },
-  {
-    id: "nemotron-3.5-lightning",
-    label: "Nemotron 3.5 Lightning",
-    tier: 3,
-    plan: "free",
-    upstream: "nvidia/nemotron-3.5-lightning-30b-a3b",
-    creditsPerMillionInput: 12,
-    creditsPerMillionOutput: 50,
-    contextWindow: 128_000,
-  },
-  {
-    id: "glm-5.3-flash",
-    label: "GLM 5.3 Flash",
-    tier: 4,
-    plan: "paid",
-    upstream: "z-ai/glm-5.3-flash",
-    creditsPerMillionInput: 30,
-    creditsPerMillionOutput: 120,
-    contextWindow: 200_000,
-  },
-  {
-    id: "glm-5.3",
-    label: "GLM 5.3",
-    tier: 5,
-    plan: "paid",
-    upstream: "z-ai/glm-5.3",
-    creditsPerMillionInput: 150,
-    creditsPerMillionOutput: 600,
-    contextWindow: 200_000,
-  },
-  {
-    id: "nemotron-3-super",
-    label: "Nemotron 3 Super",
-    tier: 6,
-    plan: "paid",
-    upstream: "nvidia/nemotron-3-super-120b-a12b",
-    creditsPerMillionInput: 75,
-    creditsPerMillionOutput: 300,
-    contextWindow: 256_000,
-  },
-]);
+export const AXLE_MODELS = Object.freeze([]);
 
 const MODELS_BY_ID = new Map(AXLE_MODELS.map((model) => [model.id, model]));
 const MODELS_BY_UPSTREAM = new Map(AXLE_MODELS.map((model) => [model.upstream, model]));

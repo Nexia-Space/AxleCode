@@ -1,21 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  handleRequest,
-  hasPaidPlan,
-  reserveCredits,
-  resolveUserId,
-  usageScanner,
-} from "./entry.js";
+import { handleRequest, resolveUserId, usageScanner } from "./entry.js";
 import { CreditsLedger, utcDate } from "./ledger.js";
-import {
-  AXLE_MODELS,
-  DAILY_FREE_CREDITS,
-  creditsForTokens,
-  creditsForUsage,
-  findModel,
-} from "./pricing.js";
+import { DAILY_FREE_CREDITS } from "./pricing.js";
 import { MemoryCreditsStore } from "./stores/memory.js";
 
 const FIXED_NOW = Date.UTC(2026, 9, 13, 12, 0, 0);
@@ -32,7 +20,7 @@ function request(path, init = {}, token = TOKEN) {
 }
 
 function environment(store = new MemoryCreditsStore(), extra = {}) {
-  return { ledgerStore: store, now: () => FIXED_NOW, UPSTREAM_API_KEY: "upstream-secret", ...extra };
+  return { ledgerStore: store, now: () => FIXED_NOW, ...extra };
 }
 
 async function withStubbedFetch(handler, run) {
@@ -44,53 +32,6 @@ async function withStubbedFetch(handler, run) {
     globalThis.fetch = original;
   }
 }
-
-function sseBody(chunks) {
-  return new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk));
-      controller.close();
-    },
-  });
-}
-
-test("catalog exposes six real-named models split across free and paid plans", () => {
-  assert.equal(AXLE_MODELS.length, 6);
-  assert.deepEqual(
-    AXLE_MODELS.map((model) => [model.id, model.label, model.plan]),
-    [
-      ["gemma-4", "Google Gemma 4", "free"],
-      ["muse-glimmer", "Meta Muse Glimmer", "free"],
-      ["nemotron-3.5-lightning", "Nemotron 3.5 Lightning", "free"],
-      ["glm-5.3-flash", "GLM 5.3 Flash", "paid"],
-      ["glm-5.3", "GLM 5.3", "paid"],
-      ["nemotron-3-super", "Nemotron 3 Super", "paid"],
-    ],
-  );
-  assert.equal(findModel("glm-5.3").upstream, "z-ai/glm-5.3");
-  assert.equal(findModel("z-ai/glm-5.3-flash").id, "glm-5.3-flash");
-  assert.equal(findModel("nvidia/nemotron-3-super-120b-a12b").id, "nemotron-3-super");
-  assert.equal(findModel("nope"), undefined);
-  for (const model of AXLE_MODELS) {
-    assert.ok(model.creditsPerMillionInput > 0);
-    assert.ok(model.creditsPerMillionOutput >= model.creditsPerMillionInput);
-  }
-});
-
-test("creditsForTokens prices input and output at the model rate", () => {
-  // gemma-4: 25 credits / 1M input, 100 credits / 1M output.
-  assert.equal(creditsForTokens("gemma-4", 1_000_000, 1_000_000), 125);
-  assert.equal(creditsForTokens("gemma-4", 0, 0), 0);
-  // Unknown models fail closed rather than billing a guessed rate.
-  assert.equal(creditsForTokens("axle-ghost", 100, 100), undefined);
-});
-
-test("creditsForUsage accepts OpenAI and Anthropic token spellings", () => {
-  const openai = creditsForUsage("gemma-4", { prompt_tokens: 1000, completion_tokens: 500 });
-  const anthropic = creditsForUsage("gemma-4", { input_tokens: 1000, output_tokens: 500 });
-  assert.equal(openai, anthropic);
-  assert.equal(openai, creditsForTokens("gemma-4", 1000, 500));
-});
 
 test("the daily grant renews instead of accumulating", async () => {
   const store = new MemoryCreditsStore();
@@ -186,15 +127,11 @@ test("a charge never overdraws the balance", async () => {
   assert.equal(await ledger.balance("user-1"), 40);
 });
 
-test("GET /v1/models lists the six Axle models with their plan", async () => {
+test("GET /v1/models is empty until a hosted provider is enabled", async () => {
   const response = await handleRequest(request("/models", { method: "GET" }), environment());
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.data.length, 6);
-  assert.equal(body.data[0].owned_by, "axle");
-  assert.equal(body.data[0].axle.plan, "free");
-  assert.equal(body.data[3].axle.plan, "paid");
-  assert.equal(body.data[4].name, "GLM 5.3");
+  assert.deepEqual(body.data, []);
 });
 
 test("GET /v1/credits renews the free bucket and reports all three buckets", async () => {
@@ -284,96 +221,6 @@ test("an unknown model is refused before any upstream call", async () => {
   assert.match(JSON.stringify(await response.json()), /Unknown model/u);
 });
 
-test("paid models require a paid plan and fail open when billing is unreachable", async () => {
-  const paidModel = JSON.stringify({
-    model: "glm-5.3",
-    max_tokens: 256,
-    messages: [{ role: "user", content: "hi" }],
-  });
-
-  // No account API configured: the gateway stays open.
-  assert.equal(await hasPaidPlan("user-open", environment()), true);
-
-  // The gateway hashes a bearer token into the user id it asks billing about.
-  async function hashedUserId(token) {
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-    return [...new Uint8Array(digest)]
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("")
-      .slice(0, 32);
-  }
-  const roles = new Map();
-  roles.set(await hashedUserId("axl_free_plan_user"), "free");
-  roles.set(await hashedUserId("axl_paid_plan_user"), "paid");
-  roles.set(await hashedUserId("axl_outage_user"), "outage");
-
-  const chatUpstream = () =>
-    Response.json({
-      id: "chatcmpl-1",
-      choices: [{ message: { role: "assistant", content: "hi" } }],
-      usage: { prompt_tokens: 1, completion_tokens: 1 },
-    });
-
-  await withStubbedFetch(
-    async (url) => {
-      if (String(url).includes("/v1/billing/plan")) {
-        const role = roles.get(new URL(String(url)).searchParams.get("user_id") ?? "") ?? "free";
-        if (role === "outage") return new Response("boom", { status: 500 });
-        return Response.json({ planId: role === "paid" ? "pro" : "free", paid: role === "paid" });
-      }
-      return chatUpstream();
-    },
-    async () => {
-      const freeUser = await handleRequest(
-        request("/chat/completions", { method: "POST", body: paidModel }, "axl_free_plan_user"),
-        environment(new MemoryCreditsStore(), {
-          ACCOUNT_API_URL: "https://accounts.example.test",
-          INTERNAL_API_TOKEN: "internal-secret",
-        }),
-      );
-      assert.equal(freeUser.status, 403);
-      const body = await freeUser.json();
-      assert.equal(body.error.code, "axle_plan_required");
-
-      const paidUser = await handleRequest(
-        request("/chat/completions", { method: "POST", body: paidModel }, "axl_paid_plan_user"),
-        environment(new MemoryCreditsStore(), {
-          ACCOUNT_API_URL: "https://accounts.example.test",
-          INTERNAL_API_TOKEN: "internal-secret",
-        }),
-      );
-      assert.equal(paidUser.status, 200);
-
-      const outage = await handleRequest(
-        request("/chat/completions", { method: "POST", body: paidModel }, "axl_outage_user"),
-        environment(new MemoryCreditsStore(), {
-          ACCOUNT_API_URL: "https://accounts.example.test",
-          INTERNAL_API_TOKEN: "internal-secret",
-        }),
-      );
-      assert.equal(outage.status, 200);
-    },
-  );
-  // With the stub still in place, an explicit billing outage fails open.
-  const failing = await withStubbedFetch(
-    async (url) => {
-      if (String(url).includes("/v1/billing/plan")) {
-        return new Response("boom", { status: 500 });
-      }
-      return chatUpstream();
-    },
-    () =>
-      handleRequest(
-        request("/chat/completions", { method: "POST", body: paidModel }, "axl_outage_2"),
-        environment(new MemoryCreditsStore(), {
-          ACCOUNT_API_URL: "https://accounts.example.test",
-          INTERNAL_API_TOKEN: "internal-secret",
-        }),
-      ),
-  );
-  assert.equal(failing.status, 200);
-});
-
 test("the internal credit route applies purchases and plan grants idempotently", async () => {
   const store = new MemoryCreditsStore();
   const env = environment(store, { INTERNAL_API_TOKEN: "internal-secret" });
@@ -412,118 +259,6 @@ test("the internal credit route applies purchases and plan grants idempotently",
 
   const ledger = new CreditsLedger(store, { now: () => FIXED_NOW });
   assert.deepEqual(await ledger.buckets("user-1"), { free: 0, plan: 2_000, paid: 1_000 });
-});
-
-test("a completed turn charges actual usage and refunds the reservation", async () => {
-  const store = new MemoryCreditsStore();
-  const env = environment(store);
-  let upstreamBody;
-
-  await withStubbedFetch(
-    async (url, init) => {
-      upstreamBody = JSON.parse(init.body);
-      assert.match(String(url), /integrate\.api\.nvidia\.com\/v1\/chat\/completions$/u);
-      return Response.json({
-        id: "chatcmpl-1",
-        model: upstreamBody.model,
-        choices: [{ message: { role: "assistant", content: "hi" } }],
-        usage: { prompt_tokens: 1000, completion_tokens: 500 },
-      });
-    },
-    async () => {
-      const response = await handleRequest(
-        request("/chat/completions", {
-          method: "POST",
-          body: JSON.stringify({ model: "gemma-4", messages: [{ role: "user", content: "hi" }] }),
-        }),
-        env,
-      );
-      assert.equal(response.status, 200);
-      const actual = creditsForUsage("gemma-4", { prompt_tokens: 1000, completion_tokens: 500 });
-      assert.equal(response.headers.get("x-axle-credits-charged"), String(actual));
-      assert.equal(Number(response.headers.get("x-axle-credits-remaining")), DAILY_FREE_CREDITS - actual);
-    },
-  );
-
-  assert.equal(upstreamBody.model, "google/gemma-4-31b-it");
-  const userId = await resolveUserId(request("/chat/completions"));
-  assert.equal(
-    await new CreditsLedger(store, { now: () => FIXED_NOW }).balance(userId),
-    DAILY_FREE_CREDITS - creditsForUsage("gemma-4", { prompt_tokens: 1000, completion_tokens: 500 }),
-  );
-});
-
-test("a request reserves more than the balance is refused with 402", async () => {
-  const store = new MemoryCreditsStore();
-  const env = environment(store);
-  const userId = await resolveUserId(request("/chat/completions"));
-  // Pre-seed today's grant so the request cannot collect the free 100 credits.
-  await store.grantDaily(userId, utcDate(FIXED_NOW), 0.5);
-
-  const response = await handleRequest(
-    request("/chat/completions", {
-      method: "POST",
-      body: JSON.stringify({
-        model: "glm-5.3",
-        max_tokens: 16384,
-        messages: [{ role: "user", content: "hello" }],
-      }),
-    }),
-    env,
-  );
-  assert.equal(response.status, 402);
-  const body = await response.json();
-  assert.equal(body.error.code, "axle_insufficient_credits");
-  assert.ok(body.error.required > body.error.balance);
-});
-
-test("reserveCredits uses max_tokens when present", () => {
-  const small = reserveCredits("glm-5.3", { messages: [], max_tokens: 256 });
-  const large = reserveCredits("glm-5.3", { messages: [], max_tokens: 4096 });
-  assert.ok(large > small);
-  assert.equal(reserveCredits("axle-ghost", { messages: [] }), undefined);
-});
-
-test("streaming turns are charged from the usage chunk after the stream ends", async () => {
-  const store = new MemoryCreditsStore();
-  const env = environment(store);
-  const scheduled = [];
-  const ctx = { waitUntil: (promise) => scheduled.push(promise) };
-
-  await withStubbedFetch(
-    async () =>
-      new Response(
-        sseBody([
-          'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n',
-          'data: {"choices":[],"usage":{"prompt_tokens":1000,"completion_tokens":500}}\n\n',
-          "data: [DONE]\n\n",
-        ]),
-        { status: 200, headers: { "Content-Type": "text/event-stream" } },
-      ),
-    async () => {
-      const response = await handleRequest(
-        request("/chat/completions", {
-          method: "POST",
-          body: JSON.stringify({
-            model: "gemma-4",
-            stream: true,
-            messages: [{ role: "user", content: "hi" }],
-          }),
-        }),
-        env,
-        ctx,
-      );
-      assert.equal(response.status, 200);
-      // Drain the stream so the scanner flushes and settlement is scheduled.
-      await response.text();
-      await Promise.all(scheduled);
-    },
-  );
-
-  const userId = await resolveUserId(request("/chat/completions"));
-  const expected =
-    DAILY_FREE_CREDITS - creditsForUsage("gemma-4", { prompt_tokens: 1000, completion_tokens: 500 });
-  assert.equal(await new CreditsLedger(store, { now: () => FIXED_NOW }).balance(userId), expected);
 });
 
 test("usageScanner ignores non-usage lines and tolerates split chunks", () => {
