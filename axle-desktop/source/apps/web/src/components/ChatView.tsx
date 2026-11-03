@@ -232,7 +232,6 @@ import { NoActiveThreadState } from "./NoActiveThreadState";
 import { resolveEffectiveEnvMode } from "./BranchToolbar.logic";
 import { ProviderStatusBanner } from "./chat/ProviderStatusBanner";
 import { ProviderConnectionDialog } from "./chat/ProviderConnectionDialog";
-import { ThreadErrorBanner } from "./chat/ThreadErrorBanner";
 import { ComposerBannerStack, type ComposerBannerStackItem } from "./chat/ComposerBannerStack";
 import {
   DRAFT_HERO_TRANSITION_ANIMATION_ID,
@@ -2276,7 +2275,20 @@ function ChatViewContent(props: ChatViewProps) {
     };
   }, [attachmentPreviewHandoffByMessageId, clearAttachmentPreviewHandoff, displayServerMessages]);
   const timelineMessages = useMemo(() => {
-    const messages = displayServerMessages;
+    const threadErrorMessage: ChatMessage | null = visibleThreadError
+      ? {
+          id: `thread-error:${activeThreadId ?? "draft"}` as MessageId,
+          role: "assistant",
+          text: visibleThreadError,
+          turnId: activeLatestTurn?.turnId ?? null,
+          streaming: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      : null;
+    const messages = threadErrorMessage
+      ? [...displayServerMessages, threadErrorMessage]
+      : displayServerMessages;
     const serverMessagesWithPreviewHandoff =
       Object.keys(attachmentPreviewHandoffByMessageId).length === 0
         ? messages
@@ -2326,7 +2338,13 @@ function ChatViewContent(props: ChatViewProps) {
       return serverMessagesWithPreviewHandoff;
     }
     return [...serverMessagesWithPreviewHandoff, ...pendingMessages];
-  }, [attachmentPreviewHandoffByMessageId, displayServerMessages, optimisticUserMessages]);
+  }, [
+    activeLatestTurn?.turnId,
+    attachmentPreviewHandoffByMessageId,
+    displayServerMessages,
+    optimisticUserMessages,
+    visibleThreadError,
+  ]);
   const timelineEntries = useMemo(
     () =>
       deriveTimelineEntries(timelineMessages, activeThread?.proposedPlans ?? [], workLogEntries),
@@ -5592,10 +5610,6 @@ function ChatViewContent(props: ChatViewProps) {
               setProviderConnectionDialogDismissed(true);
             }
           }}
-        />
-        <ThreadErrorBanner
-          error={visibleThreadError}
-          onDismiss={() => setThreadError(activeThread.id, null)}
         />
         {/* Main content area with optional plan sidebar */}
         <div className="flex min-h-0 min-w-0 flex-1">
