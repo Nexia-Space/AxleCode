@@ -401,6 +401,11 @@ jobs:
       - name: Align package versions to release version
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
 
+      - name: Install Axle Offline runtime
+        run: pnpm local-runtime:install
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Download WSL node-pty prebuild
         if: matrix.platform == 'win'
         uses: actions/download-artifact@v7
