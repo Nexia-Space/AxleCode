@@ -103,6 +103,25 @@ function customProviderEnvPrefix(name: string): string {
 const isLocalhostProviderUrl = (url: string): boolean =>
   /localhost|127\.0\.0\.1|\[::1\]/u.test(url);
 
+function guessedProviderName(baseUrl: string): string {
+  const preset = resolveProviderPreset(baseUrl);
+  if (preset) return preset.label;
+  try {
+    const hostname = new URL(baseUrl).hostname
+      .replace(/^www\./u, "")
+      .replace(/^api\./u, "")
+      .split(".")[0];
+    if (!hostname) return "";
+    return hostname
+      .split(/[-_]+/u)
+      .filter(Boolean)
+      .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(" ");
+  } catch {
+    return "";
+  }
+}
+
 const MODEL_APIS: ReadonlyArray<{
   readonly id: string;
   readonly name: string;
@@ -788,6 +807,29 @@ export function ModelsSettingsPanel() {
                   className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
                 />
                 <input
+                  type="text"
+                  value={customProviderDraft.baseUrl}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Base URL, e.g. https://api.example.com/v1"
+                  aria-label="Custom provider base URL"
+                  onChange={(event) =>
+                    setCustomProviderDraft((current) => {
+                      const nextBaseUrl = event.target.value;
+                      const previousGuess = guessedProviderName(current.baseUrl);
+                      const canReplaceName =
+                        current.name.trim().length === 0 || current.name === previousGuess;
+                      const nextGuess = guessedProviderName(nextBaseUrl);
+                      return {
+                        ...current,
+                        baseUrl: nextBaseUrl,
+                        ...(canReplaceName && nextGuess ? { name: nextGuess } : {}),
+                      };
+                    })
+                  }
+                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20 sm:col-span-2"
+                />
+                <input
                   type="password"
                   value={customProviderDraft.apiKey}
                   autoComplete="off"
@@ -798,21 +840,6 @@ export function ModelsSettingsPanel() {
                     setCustomProviderDraft((current) => ({
                       ...current,
                       apiKey: event.target.value,
-                    }))
-                  }
-                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
-                />
-                <input
-                  type="text"
-                  value={customProviderDraft.baseUrl}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder="Base URL, e.g. https://api.example.com/v1"
-                  aria-label="Custom provider base URL"
-                  onChange={(event) =>
-                    setCustomProviderDraft((current) => ({
-                      ...current,
-                      baseUrl: event.target.value,
                     }))
                   }
                   className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20 sm:col-span-2"
