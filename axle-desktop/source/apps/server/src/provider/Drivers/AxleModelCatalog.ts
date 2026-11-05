@@ -863,6 +863,7 @@ async function loadCloudflareWorkersAiModels(
     const url = new URL(endpoint);
     url.searchParams.set("hide_experimental", "true");
     url.searchParams.set("per_page", "1000");
+    url.searchParams.set("task", "text-generation");
     url.searchParams.set("page", String(page));
     const payload = await fetchJson(fetchImplementation, url.toString(), {
       headers: {

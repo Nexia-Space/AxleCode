@@ -1051,7 +1051,7 @@ describe("discoverAxleModels", () => {
 
     expect(requests.filter((request) => request.url.includes("api.cloudflare.com"))).toEqual([
       {
-        url: "https://api.cloudflare.com/client/v4/accounts/account-id/ai/models/search?hide_experimental=true&per_page=1000&page=1",
+        url: "https://api.cloudflare.com/client/v4/accounts/account-id/ai/models/search?hide_experimental=true&per_page=1000&task=text-generation&page=1",
         authorization: "Bearer cloudflare-token",
       },
     ]);
