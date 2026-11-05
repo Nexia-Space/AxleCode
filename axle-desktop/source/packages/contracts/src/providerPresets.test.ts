@@ -14,6 +14,9 @@ describe("resolveProviderPreset", () => {
   it("matches a base URL on hostname, ignoring the scheme, port and path", () => {
     expect(resolveProviderPreset("https://agentrouter.org/v1")?.id).toBe("agent-router");
     expect(resolveProviderPreset("http://AgentRouter.org:8080/v1")?.id).toBe("agent-router");
+    expect(
+      resolveProviderPreset("https://api.cloudflare.com/client/v4/accounts/account/ai/v1")?.id,
+    ).toBe("cloudflare-workers-ai");
   });
 
   it("returns nothing for an unknown host or a value that is not a URL", () => {

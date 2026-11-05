@@ -137,6 +137,12 @@ export const PROVIDER_PRESETS: ReadonlyArray<ProviderPreset> = [
     hosts: ["ollama.com"],
     docsUrl: "https://ollama.com",
   },
+  {
+    id: "cloudflare-workers-ai",
+    label: "Cloudflare Workers AI",
+    hosts: ["api.cloudflare.com"],
+    docsUrl: "https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/",
+  },
 ];
 
 /** Environment variable holding a provider's extra request headers, as JSON. */
