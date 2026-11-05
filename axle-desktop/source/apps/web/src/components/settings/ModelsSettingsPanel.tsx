@@ -827,7 +827,7 @@ export function ModelsSettingsPanel() {
                       };
                     })
                   }
-                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20 sm:col-span-2"
+                  className="h-9 min-w-0 rounded-lg border border-input bg-background/70 px-3 text-sm outline-none shadow-sm/4 transition-colors placeholder:text-muted-foreground/50 focus:border-ring focus:ring-2 focus:ring-ring/20"
                 />
                 <input
                   type="password"
