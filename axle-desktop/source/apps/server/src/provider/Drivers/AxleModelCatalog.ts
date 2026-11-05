@@ -833,6 +833,101 @@ async function loadOpenAICompatibleModels(
   );
 }
 
+function cloudflareWorkersAiModelsEndpoint(baseUrl: string): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return undefined;
+  }
+  if (parsed.hostname.toLowerCase() !== "api.cloudflare.com") return undefined;
+  const match = parsed.pathname.match(/^\/client\/v4\/accounts\/([^/]+)\/ai\/v1\/?$/u);
+  if (!match?.[1]) return undefined;
+  parsed.pathname = `/client/v4/accounts/${match[1]}/ai/models/search`;
+  parsed.search = "";
+  return parsed.toString();
+}
+
+async function loadCloudflareWorkersAiModels(
+  apiKey: string,
+  fetchImplementation: FetchImplementation,
+  baseUrl: string,
+  extraHeaders?: ReadonlyArray<readonly [string, string]>,
+): Promise<ReadonlyArray<RemoteModel>> {
+  const endpoint = cloudflareWorkersAiModelsEndpoint(baseUrl);
+  if (!endpoint) throw new Error("Cloudflare Workers AI base URL must include an account id");
+
+  const models: RemoteModel[] = [];
+  let page = 1;
+  for (;;) {
+    const url = new URL(endpoint);
+    url.searchParams.set("hide_experimental", "true");
+    url.searchParams.set("per_page", "1000");
+    url.searchParams.set("page", String(page));
+    const payload = await fetchJson(fetchImplementation, url.toString(), {
+      headers: {
+        ...providerPresetRequestHeaders(baseUrl),
+        ...Object.fromEntries(extraHeaders ?? []),
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+    if (Array.isArray(payload.result)) {
+      for (const value of payload.result) {
+        if (!isRecord(value)) continue;
+        const id = nonEmptyString(value.model) ?? nonEmptyString(value.id);
+        if (!id) continue;
+        const model = remoteModelFromRecord({ ...value, id });
+        if (model) models.push(model);
+      }
+    }
+
+    const resultInfo = isRecord(payload.result_info) ? payload.result_info : undefined;
+    const totalPages = positiveInteger(resultInfo?.total_pages);
+    if (!totalPages || page >= totalPages) break;
+    page += 1;
+  }
+  return models;
+}
+
+async function loadConfiguredOpenAICompatibleModels(
+  apiKey: string,
+  fetchImplementation: FetchImplementation,
+  baseUrl: string,
+  modelsDev: ModelsDevCatalog | undefined,
+  modelsDevProvider: string,
+  extraHeaders?: ReadonlyArray<readonly [string, string]>,
+): Promise<ReadonlyArray<RemoteModel>> {
+  const cloudflareModels = await loadCloudflareWorkersAiModelsIfConfigured(
+    apiKey,
+    fetchImplementation,
+    baseUrl,
+    extraHeaders,
+  );
+  const models =
+    cloudflareModels ??
+    (await loadOpenAICompatibleModels(
+      apiKey,
+      fetchImplementation,
+      baseUrl,
+      modelsDev,
+      modelsDevProvider,
+      extraHeaders,
+    ));
+  return models.map((model) =>
+    mergeRemoteModelMetadata(model, modelsDevModel(modelsDev, modelsDevProvider, model.id)),
+  );
+}
+
+async function loadCloudflareWorkersAiModelsIfConfigured(
+  apiKey: string,
+  fetchImplementation: FetchImplementation,
+  baseUrl: string,
+  extraHeaders?: ReadonlyArray<readonly [string, string]>,
+): Promise<ReadonlyArray<RemoteModel> | undefined> {
+  if (!cloudflareWorkersAiModelsEndpoint(baseUrl)) return undefined;
+  return loadCloudflareWorkersAiModels(apiKey, fetchImplementation, baseUrl, extraHeaders);
+}
+
 async function loadOpenAIModels(
   apiKey: string,
   fetchImplementation: FetchImplementation,
@@ -1271,7 +1366,7 @@ export async function discoverAxleModels(
           _environment: NodeJS.ProcessEnv,
           modelsDev?: ModelsDevCatalog,
         ) =>
-          loadOpenAICompatibleModels(
+          loadConfiguredOpenAICompatibleModels(
             apiKey,
             fetchImplementation,
             provider.baseUrl,

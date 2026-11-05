@@ -1018,6 +1018,49 @@ describe("discoverAxleModels", () => {
     expect(result.models.map((model) => model.slug)).toEqual(["agent-router/claude-opus-5-5"]);
   });
 
+  it("uses Cloudflare's account model catalogue for Workers AI endpoints", async () => {
+    const requests: Array<{ readonly url: string; readonly authorization: string | null }> = [];
+    const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      requests.push({
+        url,
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      if (url.includes("/ai/models/search?")) {
+        return jsonResponse({
+          result: [
+            {
+              model: "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+              name: "DeepSeek V4.1 Flash",
+            },
+            { model: "@cf/meta/llama-3.1-8b-instruct", name: "Llama 3.1 8B" },
+          ],
+          result_info: { total_pages: 1 },
+        });
+      }
+      throw new Error(`unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    const result = await discoverAxleModels(
+      {
+        CLOUDFLARE_BASE_URL: "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1",
+        CLOUDFLARE_API_KEY: "cloudflare-token",
+      },
+      fetchImplementation,
+    );
+
+    expect(requests.filter((request) => request.url.includes("api.cloudflare.com"))).toEqual([
+      {
+        url: "https://api.cloudflare.com/client/v4/accounts/account-id/ai/models/search?hide_experimental=true&per_page=1000&page=1",
+        authorization: "Bearer cloudflare-token",
+      },
+    ]);
+    expect(result.models.map((model) => [model.slug, model.name])).toEqual([
+      ["cloudflare/@cf/deepseek-ai/deepseek-v4.1-flash-1017", "DeepSeek V4.1 Flash"],
+      ["cloudflare/@cf/meta/llama-3.1-8b-instruct", "Llama 3.1 8B"],
+    ]);
+  });
+
   it("lets a provider carry extra headers and override a preset's own", async () => {
     const requests: Array<{ url: string; userAgent: string | null; extra: string | null }> = [];
     const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {
