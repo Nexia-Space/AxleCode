@@ -39,6 +39,7 @@ import { ProviderEventLoggers } from "../Layers/ProviderEventLoggers.ts";
 import { discoverAxleModels, type AxleModelDiscovery } from "./AxleModelCatalog.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { ServerConfig } from "../../config.ts";
+import { ProviderDriverError } from "../Errors.ts";
 import packageJson from "../../../package.json" with { type: "json" };
 
 const DRIVER_KIND = ProviderDriverKind.make("axle");
@@ -408,7 +409,7 @@ export const AxleDriver: ProviderDriver<
         snapshot: {
           maintenanceCapabilities,
           getSnapshot: Ref.get(snapshotRef),
-          refresh: refreshSnapshot,
+          refresh: refreshSnapshot.pipe(Effect.orDie),
           streamChanges: Stream.fromPubSub(snapshotChanges),
         },
         adapter,
@@ -419,5 +420,15 @@ export const AxleDriver: ProviderDriver<
           localModelsStatePath: serverConfig.localModelsStatePath,
         }),
       } satisfies ProviderInstance;
-    }),
+    }).pipe(
+      Effect.mapError(
+        (error) =>
+          new ProviderDriverError({
+            driver: DRIVER_KIND,
+            instanceId,
+            detail: error.message,
+            cause: error,
+          }),
+      ),
+    ),
 };

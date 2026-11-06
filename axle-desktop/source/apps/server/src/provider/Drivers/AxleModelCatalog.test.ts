@@ -977,7 +977,7 @@ describe("discoverAxleModels", () => {
   it("does not discover a disabled user-provided endpoint", async () => {
     const fetchImplementation = (async () => {
       throw new Error("disabled providers must not be probed");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const result = await discoverAxleModels(
       {
