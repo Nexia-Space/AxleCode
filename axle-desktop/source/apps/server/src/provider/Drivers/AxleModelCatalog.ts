@@ -860,18 +860,31 @@ async function loadCloudflareWorkersAiModels(
   const models: RemoteModel[] = [];
   let page = 1;
   for (;;) {
-    const url = new URL(endpoint);
-    url.searchParams.set("hide_experimental", "true");
-    url.searchParams.set("per_page", "1000");
-    url.searchParams.set("task", "text-generation");
-    url.searchParams.set("page", String(page));
-    const payload = await fetchJson(fetchImplementation, url.toString(), {
-      headers: {
-        ...providerPresetRequestHeaders(baseUrl),
-        ...Object.fromEntries(extraHeaders ?? []),
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
+    const requestPage = async (filterTextGeneration: boolean) => {
+      const url = new URL(endpoint);
+      url.searchParams.set("hide_experimental", "true");
+      url.searchParams.set("per_page", "1000");
+      if (filterTextGeneration) url.searchParams.set("task", "text-generation");
+      url.searchParams.set("page", String(page));
+      return fetchJson(fetchImplementation, url.toString(), {
+        headers: {
+          ...providerPresetRequestHeaders(baseUrl),
+          ...Object.fromEntries(extraHeaders ?? []),
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+    };
+    let payload: Record<string, unknown>;
+    try {
+      payload = await requestPage(true);
+    } catch {
+      // Some Cloudflare accounts reject the optional task filter. The model
+      // catalogue itself is still valid, so retry without that filter.
+      payload = await requestPage(false);
+    }
+    if (!Array.isArray(payload.result) || payload.result.length === 0) {
+      payload = await requestPage(false);
+    }
     if (Array.isArray(payload.result)) {
       for (const value of payload.result) {
         if (!isRecord(value)) continue;
