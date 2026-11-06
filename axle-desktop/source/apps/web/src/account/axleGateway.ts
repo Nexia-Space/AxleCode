@@ -14,7 +14,7 @@
 import { fetchPrimaryEnvironment } from "../environments/primary/httpLayer";
 import { resolvePrimaryEnvironmentHttpUrl } from "../environments/primary/target";
 
-const DEFAULT_GATEWAY_URL = "https://axle-gateway.axle-download-worker.workers.dev/v1";
+const DEFAULT_GATEWAY_URL = "https://axle-gateway.axle-workers.workers.dev/v1";
 
 export function axleGatewayBaseUrl(): string {
   const configured = import.meta.env.VITE_AXLE_GATEWAY_URL?.trim() || DEFAULT_GATEWAY_URL;

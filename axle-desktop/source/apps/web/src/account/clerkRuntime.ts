@@ -27,7 +27,7 @@ export type ClerkFrameMessage =
     }
   | { readonly source: "axle-clerk-frame"; readonly type: "error"; readonly message: string };
 
-const DEFAULT_WORKER_URL = "https://axle-auth.axle-download-worker.workers.dev";
+const DEFAULT_WORKER_URL = "https://axle-auth.axle-workers.workers.dev";
 let activeAccountTokenReader: (() => Promise<string | null>) | null = null;
 
 function workerBaseUrl(): string {

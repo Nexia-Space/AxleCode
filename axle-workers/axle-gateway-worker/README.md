@@ -59,12 +59,12 @@ wrangler d1 create axle-credits          # paste the id into wrangler.toml
 wrangler d1 execute axle-credits --file=migrations/0001_credits.sql --remote
 wrangler d1 execute axle-credits --file=migrations/0002_credit_buckets.sql --remote
 wrangler secret put INTERNAL_API_TOKEN   # shared with the account API
-wrangler secret put ACCOUNT_API_URL     # e.g. https://axle-account.axle-download-worker.workers.dev
+wrangler secret put ACCOUNT_API_URL     # e.g. https://axle-account.axle-workers.workers.dev
 wrangler deploy
 ```
 
 This deployment lives at
-`https://axle-gateway.axle-download-worker.workers.dev`, which is the default
+`https://axle-gateway.axle-workers.workers.dev`, which is the default
 `--provider axle` base URL, so the desktop app reaches it with no configuration.
 
 ## Identity

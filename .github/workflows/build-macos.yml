@@ -28,7 +28,7 @@ jobs:
           node-version: '24'
 
       - name: Test platform update routes
-        run: npm --prefix axle-download-worker test
+        run: npm --prefix axle-workers/axle-download-worker test
 
   prepare-release:
     needs: test-update-feeds
@@ -143,7 +143,7 @@ jobs:
         working-directory: axle-desktop/source
         env:
           NODE_ENV: production
-          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-download-worker.workers.dev/get' }}/updates/macos/x64
+          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-workers.workers.dev/get' }}/updates/macos/x64
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
 
@@ -268,7 +268,7 @@ jobs:
         working-directory: axle-desktop/source
         env:
           NODE_ENV: production
-          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-download-worker.workers.dev/get' }}/updates/macos/arm64
+          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-workers.workers.dev/get' }}/updates/macos/arm64
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
 
@@ -370,7 +370,7 @@ jobs:
         working-directory: axle-desktop/source
         env:
           NODE_ENV: production
-          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-download-worker.workers.dev/get' }}/updates/linux
+          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-workers.workers.dev/get' }}/updates/linux
           T3CODE_DESKTOP_OUTPUT_DIR: release-appimage
 
       - run: pnpm --config.verify-deps-before-run=false dist:desktop:linux:deb
@@ -543,7 +543,7 @@ jobs:
         working-directory: axle-desktop/source
         env:
           NODE_ENV: production
-          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-download-worker.workers.dev/get' }}/updates/windows
+          AXLE_UPDATE_URL: ${{ vars.AXLE_UPDATE_SITE_URL || 'https://axle-download.axle-workers.workers.dev/get' }}/updates/windows
 
       - name: Verify Windows updater artifacts
         shell: pwsh

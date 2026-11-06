@@ -8,7 +8,7 @@ The most important rule is simple:
 - The **OAuth App client secret is confidential** and must never be embedded in Electron, JavaScript shipped to users, a public config file, a release archive, or a repository commit.
 - The client secret belongs in the server-side auth broker as a platform secret.
 
-The reference broker is in `axle-auth-worker/` and is ready to deploy to Cloudflare Workers.
+The reference broker is in `axle-workers/axle-auth-worker/` and is ready to deploy to Cloudflare Workers.
 
 ## 1. Create or configure the OAuth App
 
@@ -21,7 +21,7 @@ Recommended registration values:
 | OAuth App name | `Axle` |
 | Homepage URL | Your real HTTPS Axle website |
 | Callback URL | `http://127.0.0.1/github/oauth/callback` |
-| Callback URL (second) | `https://axle-auth.axle-download-worker.workers.dev/v1/auth/callback/github` |
+| Callback URL (second) | `https://axle-auth.axle-workers.workers.dev/v1/auth/callback/github` |
 | Callback wildcard matching | **Off** |
 | Device Flow | **Off** |
 
@@ -35,7 +35,7 @@ The same GitHub OAuth App serves two flows, so **both** callback URLs must be re
    exchange (`/v1/github/exchange`) and never sees the browser redirect.
 2. **Axle account sign-in** ("Continue with GitHub"): the worker owns this
    callback, so register `${PUBLIC_BASE_URL}/v1/auth/callback/github`, today
-   `https://axle-auth.axle-download-worker.workers.dev/v1/auth/callback/github`.
+   `https://axle-auth.axle-workers.workers.dev/v1/auth/callback/github`.
    Without it, GitHub sign-in fails with `redirect_uri_mismatch` even though the
    desktop plugin flow works, and vice versa.
 
@@ -73,7 +73,7 @@ It does not store GitHub user tokens or refresh tokens. Those remain on the user
 From the repository root:
 
 ```bash
-cd axle-auth-worker
+cd axle-workers/axle-auth-worker
 npm install
 ```
 
@@ -108,7 +108,7 @@ npx wrangler deploy
 The currently deployed HTTPS broker is:
 
 ```text
-https://axle-auth.axle-download-worker.workers.dev
+https://axle-auth.axle-workers.workers.dev
 ```
 
 A dedicated Cloudflare custom domain or route (for example
@@ -122,7 +122,7 @@ non-HTTPS broker URLs except loopback HTTP used for local development.
 Open or request:
 
 ```text
-https://axle-auth.axle-download-worker.workers.dev/health
+https://axle-auth.axle-workers.workers.dev/health
 ```
 
 A correctly configured broker returns a small response indicating that the GitHub client ID is configured. It never returns the client secret.
@@ -148,7 +148,7 @@ Example:
 
 ```text
 AXLE_GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx
-AXLE_GITHUB_AUTH_BROKER_URL=https://axle-auth.axle-download-worker.workers.dev
+AXLE_GITHUB_AUTH_BROKER_URL=https://axle-auth.axle-workers.workers.dev
 ```
 
 These values are intentionally public. `vite.config.ts` embeds them in the packaged desktop application so end users do not have to set environment variables after installation.

@@ -1337,7 +1337,7 @@ export function resolveServerRuntimeDependencies(
  * Electron surfaces as "no update feed is configured" and which leaves the
  * Check for Updates button disabled for the life of that install.
  */
-const DEFAULT_AXLE_UPDATE_BASE_URL = "https://axle-download.axle-download-worker.workers.dev/get";
+const DEFAULT_AXLE_UPDATE_BASE_URL = "https://axle-download.axle-workers.workers.dev/get";
 
 /**
  * The feed path for a build, mirroring the download worker's routes:

@@ -3,7 +3,7 @@ name: Plugin Auth PR
 on:
   pull_request:
     paths:
-      - 'axle-auth-worker/**'
+      - 'axle-workers/axle-auth-worker/**'
       - 'axle-desktop/source/apps/account-api/**'
       - 'axle-desktop/source/apps/desktop/**'
       - 'axle-desktop/source/apps/server/**'
@@ -36,7 +36,7 @@ jobs:
 
       - name: Test Cloudflare plugin worker
         run: npm test
-        working-directory: axle-auth-worker
+        working-directory: axle-workers/axle-auth-worker
 
       - name: Install desktop workspace dependencies
         run: pnpm install --frozen-lockfile --filter "./apps/*" --filter "./packages/*" --filter "./scripts"

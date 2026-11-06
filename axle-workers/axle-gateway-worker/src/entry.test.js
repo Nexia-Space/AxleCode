@@ -13,7 +13,7 @@ const TOKEN = "axle_test_key";
 function request(path, init = {}, token = TOKEN) {
   const headers = { "Content-Type": "application/json" };
   if (token !== null) headers.Authorization = `Bearer ${token}`;
-  return new Request(`https://axle-gateway.axle-download-worker.workers.dev/v1${path}`, {
+  return new Request(`https://axle-gateway.axle-workers.workers.dev/v1${path}`, {
     headers,
     ...init,
   });
@@ -155,7 +155,7 @@ test("GET /v1/credits renews the free bucket and reports all three buckets", asy
 });
 
 test("requests without an Axle key are rejected", async () => {
-  const anonymous = new Request("https://axle-gateway.axle-download-worker.workers.dev/v1/credits");
+  const anonymous = new Request("https://axle-gateway.axle-workers.workers.dev/v1/credits");
   const response = await handleRequest(anonymous, environment());
   assert.equal(response.status, 401);
 });
@@ -191,7 +191,7 @@ test("GET /v1/usage reports the ledger behind the balance, newest first", async 
 });
 
 test("GET /v1/usage rejects an anonymous caller and clamps its limit", async () => {
-  const anonymous = new Request("https://axle-gateway.axle-download-worker.workers.dev/v1/usage");
+  const anonymous = new Request("https://axle-gateway.axle-workers.workers.dev/v1/usage");
   assert.equal((await handleRequest(anonymous, environment())).status, 401);
 
   const store = new MemoryCreditsStore();

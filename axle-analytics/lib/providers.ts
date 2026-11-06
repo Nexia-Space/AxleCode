@@ -12,7 +12,7 @@ export interface ProviderInfo {
 const PROVIDER_INFO: Record<string, { name: string; url: string | null }> = {
   axle: {
     name: "Axle Gateway",
-    url: "https://axle-gateway.axle-download-worker.workers.dev/v1",
+    url: "https://axle-gateway.axle-workers.workers.dev/v1",
   },
   tokenhabour: {
     name: "Token Harbor",

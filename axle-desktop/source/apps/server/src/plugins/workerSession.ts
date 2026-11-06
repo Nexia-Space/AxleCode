@@ -2,7 +2,7 @@
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 
-const DEFAULT_PLUGIN_WORKER_URL = "https://axle-auth.axle-download-worker.workers.dev";
+const DEFAULT_PLUGIN_WORKER_URL = "https://axle-auth.axle-workers.workers.dev";
 const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9._~-]{20,4096}$/u;
 
 export const SUPPORTED_PLUGIN_IDS = [

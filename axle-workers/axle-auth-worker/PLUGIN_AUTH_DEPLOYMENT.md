@@ -21,7 +21,7 @@ OAuth client IDs are public values. Put them in `wrangler.toml` under `[vars]`; 
 - `FIGMA_CLIENT_ID`
 - `CLERK_PUBLISHABLE_KEY`
 - `PUBLIC_BASE_URL`, the deployed Worker origin. Today this is
-  `https://axle-auth.axle-download-worker.workers.dev`. A custom domain such as
+  `https://axle-auth.axle-workers.workers.dev`. A custom domain such as
   `https://auth.axle.llc` can replace it once the domain is attached and its DNS
   resolves, but `PUBLIC_BASE_URL` and `AUTH_ISSUER` must stay in sync with the
   origin actually serving the Worker.
@@ -60,13 +60,13 @@ wrangler secret put INTERNAL_API_TOKEN
 Configure each provider application to allow the callback on the deployed Worker origin:
 
 ```text
-Google sign-in: https://axle-auth.axle-download-worker.workers.dev/v1/auth/callback/google
-Gmail:   https://axle-auth.axle-download-worker.workers.dev/v1/plugins/gmail/callback
-Slack:   https://axle-auth.axle-download-worker.workers.dev/v1/plugins/slack/callback
-Jira:    https://axle-auth.axle-download-worker.workers.dev/v1/plugins/jira/callback
-Notion:  https://axle-auth.axle-download-worker.workers.dev/v1/plugins/notion/callback
-Sentry:  https://axle-auth.axle-download-worker.workers.dev/v1/plugins/sentry/callback
-Figma:   https://axle-auth.axle-download-worker.workers.dev/v1/plugins/figma/callback
+Google sign-in: https://axle-auth.axle-workers.workers.dev/v1/auth/callback/google
+Gmail:   https://axle-auth.axle-workers.workers.dev/v1/plugins/gmail/callback
+Slack:   https://axle-auth.axle-workers.workers.dev/v1/plugins/slack/callback
+Jira:    https://axle-auth.axle-workers.workers.dev/v1/plugins/jira/callback
+Notion:  https://axle-auth.axle-workers.workers.dev/v1/plugins/notion/callback
+Sentry:  https://axle-auth.axle-workers.workers.dev/v1/plugins/sentry/callback
+Figma:   https://axle-auth.axle-workers.workers.dev/v1/plugins/figma/callback
 ```
 
 Do not register callbacks for `auth.axle.llc` (or any other custom domain) until
@@ -162,8 +162,8 @@ NEON_AUTH_AUDIENCE=axle-relay
 Source builds need only the Worker origin:
 
 ```sh
-VITE_AXLE_PLUGIN_WORKER_URL=https://axle-auth.axle-download-worker.workers.dev
-AXLE_PLUGIN_WORKER_URL=https://axle-auth.axle-download-worker.workers.dev
+VITE_AXLE_PLUGIN_WORKER_URL=https://axle-auth.axle-workers.workers.dev
+AXLE_PLUGIN_WORKER_URL=https://axle-auth.axle-workers.workers.dev
 ```
 
 The provider client IDs do not need to be exposed to the Electron renderer because the Worker constructs the provider authorization URLs. They are public, but keeping them in Worker vars gives one authoritative deployment configuration and avoids duplicating OAuth config in the installer.
@@ -193,10 +193,10 @@ After deployment, verify `/health`, Clerk sign-in, every provider OAuth callback
 
 ### Credentialless smoke test
 
-These checks need no secrets and catch origin drift, broken routes, and auth-wall regressions. Verified against the deployed `https://axle-auth.axle-download-worker.workers.dev` on 2026-10-18:
+These checks need no secrets and catch origin drift, broken routes, and auth-wall regressions. Verify against the deployed `https://axle-auth.axle-workers.workers.dev` after the subdomain cutover:
 
 ```sh
-BASE=https://axle-auth.axle-download-worker.workers.dev
+BASE=https://axle-auth.axle-workers.workers.dev
 
 # 0. Secret inventory: names only, never values. Expect at minimum
 #    GITHUB_CLIENT_SECRET, GOOGLE_CLIENT_SECRET, PLUGIN_TOKEN_ENCRYPTION_KEY,

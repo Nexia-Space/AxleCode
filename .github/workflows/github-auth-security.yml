@@ -3,7 +3,7 @@ name: GitHub Auth Security
 on:
   pull_request:
     paths:
-      - 'axle-auth-worker/**'
+      - 'axle-workers/axle-auth-worker/**'
       - 'axle-desktop/source/apps/desktop/**'
       - 'axle-desktop/source/apps/web/src/components/pullRequests/**'
       - 'axle-desktop/source/package.json'
@@ -14,7 +14,7 @@ on:
     branches:
       - main
     paths:
-      - 'axle-auth-worker/**'
+      - 'axle-workers/axle-auth-worker/**'
       - 'axle-desktop/source/apps/desktop/**'
       - 'axle-desktop/source/apps/web/src/components/pullRequests/**'
       - 'axle-desktop/source/package.json'
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: axle-auth-worker
+        working-directory: axle-workers/axle-auth-worker
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

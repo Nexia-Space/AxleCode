@@ -26,7 +26,7 @@ jobs:
           node-version: '24'
 
       - name: Test platform update routes
-        run: npm --prefix axle-download-worker test
+        run: npm --prefix axle-workers/axle-download-worker test
 
   build-wsl-node-pty:
     needs: test-update-feeds

@@ -27,7 +27,7 @@ use tracing_subscriber::EnvFilter;
 /// Axle's hosted gateway. The desktop app ships this base URL so every user
 /// gets a working provider with an `AXLE_API_KEY`, instead of configuring a
 /// vendor key of their own.
-const DEFAULT_AXLE_BASE_URL: &str = "https://axle-gateway.axle-download-worker.workers.dev/v1";
+const DEFAULT_AXLE_BASE_URL: &str = "https://axle-gateway.axle-workers.workers.dev/v1";
 
 /// Axle's own provider is preconfigured, so a user who has not minted an Axle
 /// API key still gets a working provider. The hosted gateway hashes any bearer

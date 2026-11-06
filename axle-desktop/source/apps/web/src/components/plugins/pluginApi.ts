@@ -4,7 +4,7 @@ import { PrimaryEnvironmentHttpClient } from "../../environments/primary/httpCli
 import { runPrimaryHttp } from "../../lib/runtime";
 import type { PluginId } from "./pluginCatalog";
 
-const DEFAULT_WORKER_URL = "https://axle-auth.axle-download-worker.workers.dev";
+const DEFAULT_WORKER_URL = "https://axle-auth.axle-workers.workers.dev";
 const SESSION_STORAGE_KEY = "axle.plugin-session.v1";
 const INSTALLATION_ID_STORAGE_KEY = "axle.plugin-installation-id.v1";
 const PENDING_SESSION_REVOKE_STORAGE_KEY = "axle.plugin-session-revoke.v1";
@@ -118,9 +118,7 @@ async function workerFetch(input: RequestInfo | URL, init?: RequestInit): Promis
       }
     }
   }
-  throw lastError instanceof Error
-    ? lastError
-    : new Error("Axle's plugin service is unavailable.");
+  throw lastError instanceof Error ? lastError : new Error("Axle's plugin service is unavailable.");
 }
 
 async function installationId(): Promise<string> {
@@ -176,8 +174,7 @@ async function readJson<T>(response: Response): Promise<T> {
 export function loadPluginSessionToken(): string | null {
   if (inMemorySessionToken !== undefined) return inMemorySessionToken;
   try {
-    const value =
-      readStoredValue(SESSION_STORAGE_KEY, LEGACY_SESSION_STORAGE_KEYS)?.trim() ?? "";
+    const value = readStoredValue(SESSION_STORAGE_KEY, LEGACY_SESSION_STORAGE_KEYS)?.trim() ?? "";
     inMemorySessionToken = value.length >= 20 ? value : null;
     return inMemorySessionToken;
   } catch {
@@ -235,8 +232,10 @@ async function persistPluginSessionTokenDurably(token: string | null): Promise<v
 function loadPendingSessionRevocations(): string[] {
   try {
     const raw =
-      readStoredValue(PENDING_SESSION_REVOKE_STORAGE_KEY, LEGACY_PENDING_SESSION_REVOKE_STORAGE_KEYS)?.trim() ??
-      "";
+      readStoredValue(
+        PENDING_SESSION_REVOKE_STORAGE_KEY,
+        LEGACY_PENDING_SESSION_REVOKE_STORAGE_KEYS,
+      )?.trim() ?? "";
     if (!raw) return [];
     try {
       const parsed: unknown = JSON.parse(raw);

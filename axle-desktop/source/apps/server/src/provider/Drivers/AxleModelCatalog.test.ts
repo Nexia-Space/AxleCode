@@ -7,7 +7,7 @@ import * as NodePath from "node:path";
 import { discoverAxleModels, loadCodexModels } from "./AxleModelCatalog.ts";
 
 /** Where the built-in Axle provider probes, with no `<PREFIX>_BASE_URL` set. */
-const AXLE_GATEWAY_MODELS_URL = "https://axle-gateway.axle-download-worker.workers.dev/v1/models";
+const AXLE_GATEWAY_MODELS_URL = "https://axle-gateway.axle-workers.workers.dev/v1/models";
 
 /**
  * Axle's own provider is built in, so it is always part of the configured set

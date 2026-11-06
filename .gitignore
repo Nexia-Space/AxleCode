@@ -17,8 +17,10 @@
 /axle-website/design-qa.md
 /axle-website/site-audit.md
 /.rsvelte-language-server/
-/axle-auth-worker/node_modules/
-/axle-download-worker/.wrangler/
-/axle-auth-worker/.wrangler/
-/axle-gateway-worker/.wrangler/
+/axle-workers/axle-auth-worker/node_modules/
+/axle-workers/*/node_modules/
+/axle-workers/*/.wrangler/
+/axle-workers/axle-download-worker/.wrangler/
+/axle-workers/axle-auth-worker/.wrangler/
+/axle-workers/axle-gateway-worker/.wrangler/
 /axle-landing/.wrangler/

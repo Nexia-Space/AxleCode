@@ -22,15 +22,15 @@ FIGMA_CLIENT_ID = "TrhydLVOAqbLP53nT9JnZO"
 # the isolated desktop sign-in frame from this value.
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYXV0aC5zcGFya3kubGxjJA"
 # Set to the deployed Worker origin, e.g. https://auth.axle.llc.
-PUBLIC_BASE_URL = "https://axle-auth.axle-download-worker.workers.dev"
+PUBLIC_BASE_URL = "https://axle-auth.axle-workers.workers.dev"
 # Value of the `iss` claim in Axle access tokens, and the base of the published
 # JWKS. Keep it pinned so rotating PUBLIC_BASE_URL never invalidates sessions.
-AUTH_ISSUER = "https://axle-auth.axle-download-worker.workers.dev"
+AUTH_ISSUER = "https://axle-auth.axle-workers.workers.dev"
 # The account API is the source of truth for subscription plans; plugin
 # connections on paid plugins are gated against /v1/billing/plan through the
 # service binding below. INTERNAL_API_TOKEN is installed as a secret with the
 # same value as the gateway's.
-ACCOUNT_API_URL = "https://axle-account.axle-download-worker.workers.dev"
+ACCOUNT_API_URL = "https://axle-account.axle-workers.workers.dev"
 
 [[services]]
 binding = "ACCOUNT_API_SERVICE"

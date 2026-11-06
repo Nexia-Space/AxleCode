@@ -4,7 +4,7 @@ compatibility_date = "2026-08-31"
 workers_dev = true
 
 # The hosted provider the desktop app calls with `--provider axle`. Point the
-# engine at https://axle-gateway.axle-download-worker.workers.dev/v1 (the default) and it reaches these routes.
+# engine at https://axle-gateway.axle-workers.workers.dev/v1 (the default) and it reaches these routes.
 #
 # UPSTREAM_API_KEY and any future payment-provider keys must be installed with
 # `wrangler secret put`; never commit them here.

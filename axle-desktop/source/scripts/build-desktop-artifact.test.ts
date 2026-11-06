@@ -160,25 +160,25 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
   it("derives the platform fallback feed the download worker serves", () => {
     assert.equal(
       resolveDefaultAxleUpdateUrl({ platform: "linux", arch: "x64" }),
-      "https://axle-download.axle-download-worker.workers.dev/get/updates/linux",
+      "https://axle-download.axle-workers.workers.dev/get/updates/linux",
     );
     assert.equal(
       resolveDefaultAxleUpdateUrl({ platform: "win", arch: "x64" }),
-      "https://axle-download.axle-download-worker.workers.dev/get/updates/windows",
+      "https://axle-download.axle-workers.workers.dev/get/updates/windows",
     );
     assert.equal(
       resolveDefaultAxleUpdateUrl({ platform: "mac", arch: "x64" }),
-      "https://axle-download.axle-download-worker.workers.dev/get/updates/macos/x64",
+      "https://axle-download.axle-workers.workers.dev/get/updates/macos/x64",
     );
     assert.equal(
       resolveDefaultAxleUpdateUrl({ platform: "mac", arch: "arm64" }),
-      "https://axle-download.axle-download-worker.workers.dev/get/updates/macos/arm64",
+      "https://axle-download.axle-workers.workers.dev/get/updates/macos/arm64",
     );
     // The worker resolves a bare `latest-mac.yml` to the arm64 build, so a
     // universal mac target must still ask for an architecture-qualified feed.
     assert.equal(
       resolveDefaultAxleUpdateUrl({ platform: "mac", arch: "universal" }),
-      "https://axle-download.axle-download-worker.workers.dev/get/updates/macos/arm64",
+      "https://axle-download.axle-workers.workers.dev/get/updates/macos/arm64",
     );
   });
 
