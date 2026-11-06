@@ -1,4 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off globalConsole:off
+// Deployment smoke marker: this API is deployed from the shared monorepo.
 import type { Db } from "mongodb";
 
 import { createAccountAuthenticator } from "./auth.ts";

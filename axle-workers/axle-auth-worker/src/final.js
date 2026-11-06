@@ -1,5 +1,7 @@
 import app from "./entry.js";
 
+// Deployment smoke marker: keep this service in the monorepo trigger path.
+
 const AXLE_FRAME_ANCESTORS = "frame-ancestors axle://app axle-dev://app";
 
 function restrictClerkFrameAncestors(response) {

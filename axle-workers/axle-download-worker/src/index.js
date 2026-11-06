@@ -1,5 +1,6 @@
 // Axle's public download and desktop-update router. Release assets are public
 // immutable files; Convex remains the app's update metadata source.
+// Deployment smoke marker: this Worker is deployed from the monorepo.
 
 const PUBLIC_CACHE_CONTROL = "no-store, max-age=0";
 const PLATFORM_ALIASES = new Map([

@@ -11,6 +11,8 @@ import {
 import { D1CreditsStore } from "./stores/d1.js";
 import { MemoryCreditsStore } from "./stores/memory.js";
 
+// Deployment smoke marker: keep hosted model traffic on the gateway Worker.
+
 const RESERVE_MIN_OUTPUT_TOKENS = 256;
 const RESERVE_DEFAULT_OUTPUT_TOKENS = 4096;
 const CHARS_PER_TOKEN = 4;

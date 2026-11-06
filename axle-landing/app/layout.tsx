@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+// Deployment smoke marker: keep the public site in the monorepo build path.
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { GrainOverlay } from "@/components/fx/grain-overlay";
