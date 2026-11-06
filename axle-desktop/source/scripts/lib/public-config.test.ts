@@ -20,7 +20,6 @@ describe("loadRepoEnv", () => {
 
     expect(env.T3CODE_NEON_AUTH_URL).toBeUndefined();
     expect(env.VITE_NEON_AUTH_URL).toBeUndefined();
-    expect(env.EXPO_PUBLIC_NEON_AUTH_URL).toBeUndefined();
     expect(env.T3CODE_NEON_AUTH_OAUTH_AUTHORIZE_URL).toBeUndefined();
     expect(env.VITE_NEON_AUTH_OAUTH_AUTHORIZE_URL).toBeUndefined();
     expect(env.T3CODE_NEON_AUTH_CLI_OAUTH_CLIENT_ID).toBeUndefined();
@@ -29,12 +28,6 @@ describe("loadRepoEnv", () => {
     expect(env.VITE_ACCOUNT_API_URL).toBeUndefined();
     expect(env.T3CODE_RELAY_URL).toBeUndefined();
     expect(env.VITE_T3CODE_RELAY_URL).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.T3CODE_MOBILE_OTLP_TRACES_TOKEN).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_URL).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_DATASET).toBeUndefined();
-    expect(env.EXPO_PUBLIC_OTLP_TRACES_TOKEN).toBeUndefined();
     expect(env.T3CODE_RELAY_CLIENT_OTLP_TRACES_URL).toBeUndefined();
     expect(env.T3CODE_RELAY_CLIENT_OTLP_TRACES_DATASET).toBeUndefined();
     expect(env.T3CODE_RELAY_CLIENT_OTLP_TRACES_TOKEN).toBeUndefined();
@@ -70,7 +63,6 @@ describe("loadRepoEnv", () => {
     ).toMatchObject({
       T3CODE_NEON_AUTH_URL: "https://ci-auth.example.test",
       VITE_NEON_AUTH_URL: "https://ci-auth.example.test",
-      EXPO_PUBLIC_NEON_AUTH_URL: "https://ci-auth.example.test",
       T3CODE_NEON_AUTH_OAUTH_AUTHORIZE_URL: "https://ci-auth.example.test/oauth/authorize",
       VITE_NEON_AUTH_OAUTH_AUTHORIZE_URL: "https://ci-auth.example.test/oauth/authorize",
       T3CODE_NEON_AUTH_CLI_OAUTH_CLIENT_ID: "oauth_ci",
@@ -88,9 +80,6 @@ describe("loadRepoEnv", () => {
         T3CODE_NEON_AUTH_CLI_OAUTH_CLIENT_ID: "oauth_canonical",
         VITE_ACCOUNT_API_URL: "https://accounts.legacy.example.test",
         VITE_T3CODE_RELAY_URL: "https://legacy.example.test",
-        EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-        EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",
-        EXPO_PUBLIC_OTLP_TRACES_TOKEN: "mobile-token",
       }),
     ).toEqual({
       neonAuthUrl: "https://auth.legacy.example.test",
@@ -98,9 +87,6 @@ describe("loadRepoEnv", () => {
       neonAuthCliOAuthClientId: "oauth_canonical",
       accountApiUrl: "https://accounts.legacy.example.test",
       relayUrl: "https://legacy.example.test",
-      mobileOtlpTracesUrl: "https://api.axiom.co/v1/traces",
-      mobileOtlpTracesDataset: "mobile-traces",
-      mobileOtlpTracesToken: "mobile-token",
       relayClientOtlpTracesUrl: undefined,
       relayClientOtlpTracesDataset: undefined,
       relayClientOtlpTracesToken: undefined,
@@ -124,29 +110,6 @@ describe("loadRepoEnv", () => {
       VITE_RELAY_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
       VITE_RELAY_OTLP_TRACES_DATASET: "relay-client-traces",
       VITE_RELAY_OTLP_TRACES_TOKEN: "relay-client-token",
-    });
-  });
-
-  it("projects canonical mobile tracing values to Expo public aliases", () => {
-    expect(
-      loadRepoEnv({
-        baseEnv: {
-          T3CODE_RELAY_URL: "https://relay.example.test",
-          T3CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-          T3CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-          T3CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
-        },
-        repoRoot: makeTemporaryDirectory(),
-      }),
-    ).toEqual({
-      T3CODE_RELAY_URL: "https://relay.example.test",
-      VITE_T3CODE_RELAY_URL: "https://relay.example.test",
-      T3CODE_MOBILE_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      T3CODE_MOBILE_OTLP_TRACES_DATASET: "mobile-traces",
-      T3CODE_MOBILE_OTLP_TRACES_TOKEN: "mobile-token",
-      EXPO_PUBLIC_OTLP_TRACES_URL: "https://api.axiom.co/v1/traces",
-      EXPO_PUBLIC_OTLP_TRACES_DATASET: "mobile-traces",
-      EXPO_PUBLIC_OTLP_TRACES_TOKEN: "mobile-token",
     });
   });
 });

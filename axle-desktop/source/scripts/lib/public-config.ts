@@ -10,9 +10,6 @@ export interface T3CodePublicConfig {
   readonly neonAuthCliOAuthClientId: string | undefined;
   readonly accountApiUrl: string | undefined;
   readonly relayUrl: string | undefined;
-  readonly mobileOtlpTracesUrl: string | undefined;
-  readonly mobileOtlpTracesDataset: string | undefined;
-  readonly mobileOtlpTracesToken: string | undefined;
   readonly relayClientOtlpTracesUrl: string | undefined;
   readonly relayClientOtlpTracesDataset: string | undefined;
   readonly relayClientOtlpTracesToken: string | undefined;
@@ -43,7 +40,6 @@ export function loadRepoEnv({
       ? {
           T3CODE_NEON_AUTH_URL: config.neonAuthUrl,
           VITE_NEON_AUTH_URL: config.neonAuthUrl,
-          EXPO_PUBLIC_NEON_AUTH_URL: config.neonAuthUrl,
         }
       : {}),
     ...(config.neonAuthOAuthAuthorizeUrl
@@ -70,24 +66,6 @@ export function loadRepoEnv({
           VITE_T3CODE_RELAY_URL: config.relayUrl,
         }
       : {}),
-    ...(config.mobileOtlpTracesUrl
-      ? {
-          T3CODE_MOBILE_OTLP_TRACES_URL: config.mobileOtlpTracesUrl,
-          EXPO_PUBLIC_OTLP_TRACES_URL: config.mobileOtlpTracesUrl,
-        }
-      : {}),
-    ...(config.mobileOtlpTracesDataset
-      ? {
-          T3CODE_MOBILE_OTLP_TRACES_DATASET: config.mobileOtlpTracesDataset,
-          EXPO_PUBLIC_OTLP_TRACES_DATASET: config.mobileOtlpTracesDataset,
-        }
-      : {}),
-    ...(config.mobileOtlpTracesToken
-      ? {
-          T3CODE_MOBILE_OTLP_TRACES_TOKEN: config.mobileOtlpTracesToken,
-          EXPO_PUBLIC_OTLP_TRACES_TOKEN: config.mobileOtlpTracesToken,
-        }
-      : {}),
     ...(config.relayClientOtlpTracesUrl
       ? {
           T3CODE_RELAY_CLIENT_OTLP_TRACES_URL: config.relayClientOtlpTracesUrl,
@@ -111,12 +89,7 @@ export function loadRepoEnv({
 
 export function resolvePublicConfig(...sources: readonly Environment[]): T3CodePublicConfig {
   return {
-    neonAuthUrl: firstNonEmpty(
-      sources,
-      "T3CODE_NEON_AUTH_URL",
-      "VITE_NEON_AUTH_URL",
-      "EXPO_PUBLIC_NEON_AUTH_URL",
-    ),
+    neonAuthUrl: firstNonEmpty(sources, "T3CODE_NEON_AUTH_URL", "VITE_NEON_AUTH_URL"),
     neonAuthOAuthAuthorizeUrl: firstNonEmpty(
       sources,
       "T3CODE_NEON_AUTH_OAUTH_AUTHORIZE_URL",
@@ -127,27 +100,8 @@ export function resolvePublicConfig(...sources: readonly Environment[]): T3CodeP
       "T3CODE_NEON_AUTH_CLI_OAUTH_CLIENT_ID",
       "VITE_NEON_AUTH_CLI_OAUTH_CLIENT_ID",
     ),
-    accountApiUrl: firstNonEmpty(
-      sources,
-      "T3CODE_ACCOUNT_API_URL",
-      "VITE_ACCOUNT_API_URL",
-    ),
+    accountApiUrl: firstNonEmpty(sources, "T3CODE_ACCOUNT_API_URL", "VITE_ACCOUNT_API_URL"),
     relayUrl: firstNonEmpty(sources, "T3CODE_RELAY_URL", "VITE_T3CODE_RELAY_URL"),
-    mobileOtlpTracesUrl: firstNonEmpty(
-      sources,
-      "T3CODE_MOBILE_OTLP_TRACES_URL",
-      "EXPO_PUBLIC_OTLP_TRACES_URL",
-    ),
-    mobileOtlpTracesDataset: firstNonEmpty(
-      sources,
-      "T3CODE_MOBILE_OTLP_TRACES_DATASET",
-      "EXPO_PUBLIC_OTLP_TRACES_DATASET",
-    ),
-    mobileOtlpTracesToken: firstNonEmpty(
-      sources,
-      "T3CODE_MOBILE_OTLP_TRACES_TOKEN",
-      "EXPO_PUBLIC_OTLP_TRACES_TOKEN",
-    ),
     relayClientOtlpTracesUrl: firstNonEmpty(
       sources,
       "T3CODE_RELAY_CLIENT_OTLP_TRACES_URL",

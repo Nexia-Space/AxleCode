@@ -5,7 +5,7 @@ description: Launch and test the Axle web app in isolated development environmen
 
 # Test T3 App
 
-Use this skill for the web client. For iOS Simulator, Android Emulator, or physical-device testing against an isolated T3 backend, use the sibling [`test-axle-mobile`](../test-axle-mobile/SKILL.md) skill.
+Use this skill for the web client.
 
 ## Start an isolated web environment
 

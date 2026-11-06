@@ -16,7 +16,7 @@ T3CODE_ACCOUNT_API_URL=https://accounts.example.com
 T3CODE_RELAY_URL=https://relay.example.com
 ```
 
-The shared loader projects these canonical values into `VITE_*` and `EXPO_PUBLIC_*` aliases. Never put
+The shared loader projects these canonical values into `VITE_*` aliases. Never put
 the `MONGODB_URI` connection string or a private signing key in a client environment.
 
 ## Server-only account API

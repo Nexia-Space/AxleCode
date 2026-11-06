@@ -16,11 +16,6 @@ const workspaceFiles = [
   "apps/server/package.json",
   "apps/desktop/package.json",
   "apps/web/package.json",
-  "apps/mobile/package.json",
-  "apps/mobile/deps/react-native-nitro-markdown-0.5.0.tgz",
-  "apps/mobile/modules/t3-markdown-text/package.json",
-  "apps/mobile/modules/t3-review-diff/package.json",
-  "apps/mobile/modules/t3-terminal/package.json",
   "apps/marketing/package.json",
   "infra/relay/package.json",
   "oxlint-plugin-t3code/package.json",
@@ -211,10 +206,14 @@ try {
   // in both local and CI environments.
   const vitePlusCliPath = NodePath.resolve(repoRoot, "node_modules/vite-plus/bin/vp");
   assertExists(vitePlusCliPath, "Expected the Vite Plus CLI to be installed.");
-  NodeChildProcess.execFileSync(process.execPath, [vitePlusCliPath, "install", "--lockfile-only", "--ignore-scripts"], {
-    cwd: tempRoot,
-    stdio: "inherit",
-  });
+  NodeChildProcess.execFileSync(
+    process.execPath,
+    [vitePlusCliPath, "install", "--lockfile-only", "--ignore-scripts"],
+    {
+      cwd: tempRoot,
+      stdio: "inherit",
+    },
+  );
 
   const lockfile = NodeFS.readFileSync(NodePath.resolve(tempRoot, "pnpm-lock.yaml"), "utf8");
   assertContains(lockfile, "lockfileVersion:", "Expected pnpm-lock.yaml to be regenerated.");
