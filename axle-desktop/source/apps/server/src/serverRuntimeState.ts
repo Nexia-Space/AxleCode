@@ -10,6 +10,8 @@ import { formatHostForUrl, isWildcardHost } from "./startupAccess.ts";
 
 export const PersistedServerRuntimeState = Schema.Struct({
   version: Schema.Literal(1),
+  /** Identifies a long-lived user daemon versus an app-owned child server. */
+  role: Schema.optional(Schema.Literals(["daemon", "desktop"])),
   pid: Schema.Int,
   host: Schema.optional(Schema.String),
   port: Schema.Int,
@@ -47,9 +49,11 @@ const runtimeOriginForConfig = (
 export const makePersistedServerRuntimeState = (input: {
   readonly config: Pick<ServerConfig.ServerConfig["Service"], "host">;
   readonly port: number;
+  readonly role?: PersistedServerRuntimeState["role"];
 }): Effect.Effect<PersistedServerRuntimeState> =>
   Effect.map(DateTime.now, (now) => ({
     version: 1,
+    ...(input.role !== undefined ? { role: input.role } : {}),
     pid: process.pid,
     ...(input.config.host ? { host: input.config.host } : {}),
     port: input.port,

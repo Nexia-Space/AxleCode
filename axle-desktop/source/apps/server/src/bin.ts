@@ -9,6 +9,7 @@ import packageJson from "../package.json" with { type: "json" };
 import { sharedServerCommandFlags } from "./cli/config.ts";
 import { projectCommand } from "./cli/project.ts";
 import { runServerCommand, serveCommand, startCommand } from "./cli/server.ts";
+import { daemonCommand } from "./daemon.ts";
 
 const CliRuntimeLayer = Layer.mergeAll(NodeServices.layer, NetService.layer);
 
@@ -16,11 +17,7 @@ export const makeCli = (_options: { readonly cloudEnabled?: boolean } = {}) =>
   Command.make("t3", { ...sharedServerCommandFlags }).pipe(
     Command.withDescription("Run the Axle server."),
     Command.withHandler((flags) => runServerCommand(flags)),
-    Command.withSubcommands([
-      startCommand,
-      serveCommand,
-      projectCommand,
-    ]),
+    Command.withSubcommands([startCommand, serveCommand, daemonCommand, projectCommand]),
   );
 
 export const cli = makeCli();

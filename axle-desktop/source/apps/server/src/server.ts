@@ -398,6 +398,7 @@ export const makeServerLayer = Layer.unwrap(
           const state = yield* makePersistedServerRuntimeState({
             config,
             port: address.port,
+            ...(process.env.AXLE_DAEMON === "1" ? { role: "daemon" as const } : {}),
           });
           yield* persistServerRuntimeState({
             path: config.serverRuntimeStatePath,

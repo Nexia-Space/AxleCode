@@ -115,6 +115,10 @@ const EnvServerConfig = Config.all({
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
+  desktopBootstrapToken: Config.string("AXLE_DESKTOP_BOOTSTRAP_TOKEN").pipe(
+    Config.option,
+    Config.map(Option.getOrUndefined),
+  ),
   autoBootstrapProjectFromCwd: Config.boolean("T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
@@ -295,7 +299,7 @@ export const resolveServerConfig = (
       ),
       () => mode === "desktop",
     );
-    const desktopBootstrapToken = bootstrap?.desktopBootstrapToken;
+    const desktopBootstrapToken = bootstrap?.desktopBootstrapToken ?? env.desktopBootstrapToken;
     const autoBootstrapProjectFromCwd = Option.getOrElse(
       resolveOptionPrecedence(
         Option.fromUndefinedOr(options?.forceAutoBootstrapProjectFromCwd),
