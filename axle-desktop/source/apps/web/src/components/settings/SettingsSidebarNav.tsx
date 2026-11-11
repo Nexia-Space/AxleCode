@@ -13,6 +13,7 @@ import {
   PlugZapIcon,
   SearchIcon,
   Settings2Icon,
+  SmartphoneIcon,
 } from "lucide-react";
 import { useCanGoBack, useNavigate } from "@tanstack/react-router";
 
@@ -43,7 +44,8 @@ export type SettingsSectionPath =
   | "/settings/mcp"
   | "/settings/memory"
   | "/settings/archived"
-  | "/settings/diagnostics";
+  | "/settings/diagnostics"
+  | "/settings/remote-access";
 
 export const SETTINGS_NAV_ITEMS: ReadonlyArray<{
   label: string;
@@ -80,6 +82,12 @@ export const SETTINGS_NAV_ITEMS: ReadonlyArray<{
   { label: "Plugins", section: "AI & tools", to: "/settings/plugins", icon: PlugZapIcon },
   { label: "MCP", section: "AI & tools", to: "/settings/mcp", icon: McpIcon },
   { label: "Memory", section: "AI & tools", to: "/settings/memory", icon: BrainIcon },
+  {
+    label: "Remote access",
+    section: "Preferences",
+    to: "/settings/remote-access",
+    icon: SmartphoneIcon,
+  },
   { label: "Keybindings", section: "Preferences", to: "/settings/keybindings", icon: KeyboardIcon },
   { label: "Archive", section: "Data", to: "/settings/archived", icon: ArchiveIcon },
   { label: "Diagnostics", section: "Data", to: "/settings/diagnostics", icon: ActivityIcon },

@@ -24,6 +24,7 @@ type MobilePairingDialogProps = {
   readonly onOpenChange: (open: boolean) => void;
   readonly endpointUrl: string | null;
   readonly networkAccessible: boolean;
+  readonly showDownloadPrompt?: boolean;
 };
 
 type PairingCredential = {
@@ -52,6 +53,7 @@ export function MobilePairingDialog({
   onOpenChange,
   endpointUrl,
   networkAccessible,
+  showDownloadPrompt = false,
 }: MobilePairingDialogProps) {
   const [credential, setCredential] = useState<PairingCredential | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,6 +128,14 @@ export function MobilePairingDialog({
           <DialogDescription>{status}</DialogDescription>
         </DialogHeader>
         <DialogPanel className="flex flex-col items-center gap-5 bg-background py-6">
+          {showDownloadPrompt ? (
+            <div className="w-full rounded-xl border border-border bg-muted/20 px-4 py-3 text-center">
+              <p className="text-sm font-medium text-foreground">First, download Axle Mobile</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Install the mobile app, then scan this code to connect it to your desktop.
+              </p>
+            </div>
+          ) : null}
           {credential !== null && !expired ? (
             <>
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">

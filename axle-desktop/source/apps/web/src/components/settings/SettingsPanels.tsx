@@ -7,7 +7,7 @@ import {
   SmartphoneIcon,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
 import {
   defaultInstanceIdForDriver,
@@ -18,6 +18,7 @@ import {
   type ProviderInstanceId,
   type ScopedThreadRef,
 } from "@axle/contracts";
+import type { ServerClientSessionRecord } from "../../environments/primary/auth";
 import { scopeThreadRef } from "@axle/client-runtime/environment";
 import { safeErrorLogAttributes } from "@axle/client-runtime/errors";
 import {
@@ -102,6 +103,10 @@ import { ProjectFavicon } from "../ProjectFavicon";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { ThemePreferenceControl } from "./ThemePreferenceControl";
 import { MobilePairingDialog } from "./MobilePairingDialog";
+import {
+  listServerClientSessions,
+  revokeServerClientSession,
+} from "../../environments/primary/auth";
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -960,8 +965,6 @@ export function GeneralSettingsPanel() {
         />
       </SettingsSection>
 
-      {isElectron ? <RemoteAccessSettingsSection /> : null}
-
       <SettingsSection title="About">
         {isElectron || HOSTED_APP_CHANNEL ? (
           <AboutVersionSection />
@@ -982,6 +985,132 @@ export function GeneralSettingsPanel() {
         />
       </SettingsSection>
     </SettingsPageContainer>
+  );
+}
+
+export function RemoteAccessSettingsPanel() {
+  return (
+    <SettingsPageContainer
+      title="Remote access"
+      description="Connect Axle Mobile to this desktop and work from anywhere on your local network."
+    >
+      {isElectron ? (
+        <>
+          <RemoteAccessSettingsSection />
+          <ConnectedDevicesSection />
+        </>
+      ) : (
+        <SettingsSection title="Desktop required">
+          <SettingsRow
+            title="Connect Axle Mobile"
+            description="Remote access is available from the Axle desktop app, where your threads, files, terminals, and providers are running."
+          />
+        </SettingsSection>
+      )}
+    </SettingsPageContainer>
+  );
+}
+
+function ConnectedDevicesSection() {
+  const [sessions, setSessions] = useState<ReadonlyArray<ServerClientSessionRecord>>([]);
+  const [loading, setLoading] = useState(true);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setSessions(await listServerClientSessions());
+    } catch {
+      setError("Axle couldn't load connected devices. Try again shortly.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const revoke = useCallback(
+    async (session: ServerClientSessionRecord) => {
+      if (session.current || revokingSessionId !== null) return;
+      setRevokingSessionId(session.sessionId);
+      setError(null);
+      try {
+        await revokeServerClientSession(session.sessionId);
+        setSessions((current) => current.filter((item) => item.sessionId !== session.sessionId));
+      } catch {
+        setError("Axle couldn't revoke that device session. Try again.");
+      } finally {
+        setRevokingSessionId(null);
+      }
+    },
+    [revokingSessionId],
+  );
+
+  return (
+    <SettingsSection
+      title="Connected devices"
+      headerAction={
+        <Button size="xs" variant="outline" onClick={() => void refresh()} disabled={loading}>
+          <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
+          Refresh
+        </Button>
+      }
+    >
+      {error ? <p className="px-4 py-3 text-xs text-destructive">{error}</p> : null}
+      {loading && sessions.length === 0 ? (
+        <div className="flex items-center gap-2 px-4 py-5 text-sm text-muted-foreground">
+          <LoaderIcon className="size-4 animate-spin" />
+          Loading connected devices…
+        </div>
+      ) : sessions.length === 0 ? (
+        <p className="px-4 py-5 text-sm text-muted-foreground">No connected devices yet.</p>
+      ) : (
+        <div className="divide-y divide-border/60">
+          {sessions.map((session) => {
+            const label = session.client.label ?? `${session.client.deviceType} device`;
+            const activity = session.lastConnectedAt ?? session.issuedAt;
+            return (
+              <div
+                key={session.sessionId}
+                className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/30">
+                    <SmartphoneIcon className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {label}
+                      {session.current ? " · This device" : ""}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {session.client.os ?? "Unknown OS"} ·{" "}
+                      {session.connected ? "Connected" : "Last active"}{" "}
+                      {formatRelativeTimeLabel(activity)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={session.current || revokingSessionId !== null}
+                  onClick={() => void revoke(session)}
+                >
+                  {revokingSessionId === session.sessionId ? (
+                    <LoaderIcon className="animate-spin" />
+                  ) : null}
+                  {session.current ? "Current device" : "Revoke"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SettingsSection>
   );
 }
 

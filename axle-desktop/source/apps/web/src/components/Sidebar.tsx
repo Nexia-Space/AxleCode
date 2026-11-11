@@ -16,6 +16,7 @@ import {
   PlusIcon,
   PinIcon,
   SearchIcon,
+  SmartphoneIcon,
   SquarePenIcon,
   TerminalIcon,
   TriangleAlertIcon,
@@ -38,6 +39,7 @@ import { useAtomValue } from "@effect/atom-react";
 import { autoAnimate } from "@formkit/auto-animate";
 import React, { useCallback, useEffect, memo, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import {
   DndContext,
   type DragCancelEvent,
@@ -131,7 +133,13 @@ import { projectEnvironment } from "../state/projects";
 import { useEnvironmentQuery } from "../state/query";
 import { threadEnvironment, useEnvironmentThread } from "../state/threads";
 import { vcsEnvironment } from "../state/vcs";
-import { useEnvironment, useEnvironments, usePrimaryEnvironmentId } from "../state/environments";
+import {
+  useEnvironment,
+  useEnvironments,
+  useEnvironmentHttpBaseUrl,
+  usePrimaryEnvironment,
+  usePrimaryEnvironmentId,
+} from "../state/environments";
 import {
   buildThreadRouteParams,
   resolveThreadRouteRef,
@@ -242,6 +250,8 @@ import {
 } from "../sidebarProjectGrouping";
 import { SidebarProviderUpdatePill } from "./sidebar/SidebarProviderUpdatePill";
 import { getModelProviderPresentation } from "./chat/providerIconUtils";
+import { MobilePairingDialog } from "./settings/MobilePairingDialog";
+import { desktopNetworkAccessStateAtom } from "../state/desktopNetworkAccess";
 const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
   updated_at: "Last user message",
   created_at: "Created at",
@@ -261,6 +271,41 @@ const PROJECT_GROUPING_MODE_LABELS: Record<SidebarProjectGroupingMode, string> =
   repository_path: "Group by repository path",
   separate: "Keep separate",
 };
+
+const SidebarRemoteAccessEntry = memo(function SidebarRemoteAccessEntry() {
+  const [isOpen, setIsOpen] = useState(false);
+  const networkAccess = useAtomValue(desktopNetworkAccessStateAtom);
+  const primaryEnvironment = usePrimaryEnvironment();
+  const primaryHttpBaseUrl = useEnvironmentHttpBaseUrl(primaryEnvironment?.environmentId ?? null);
+  const snapshot = AsyncResult.getOrElse(networkAccess, () => null);
+  const exposure = snapshot?.serverExposureState ?? null;
+  const networkAccessible =
+    exposure?.mode === "network-accessible" || exposure?.tailscaleServeEnabled === true;
+
+  return (
+    <>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          size="sm"
+          className="h-9 gap-2.5 rounded-2xl px-2.5 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          data-testid="sidebar-remote-access-trigger"
+          aria-label="Connect Axle Mobile"
+          onClick={() => setIsOpen(true)}
+        >
+          <SmartphoneIcon className="size-4 text-muted-foreground" />
+          <span className="flex-1 truncate text-left text-[13px]">Remote access</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      <MobilePairingDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        endpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
+        networkAccessible={networkAccessible}
+        showDownloadPrompt
+      />
+    </>
+  );
+});
 const SIDEBAR_ICON_ACTION_BUTTON_CLASS =
   "inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground active:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none";
 const SIDEBAR_CHATS_KEY = "__axle_chats__";
@@ -3602,6 +3647,7 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
               <span className="flex-1 truncate text-left text-[13px]">Schedules</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarRemoteAccessEntry />
         </SidebarMenu>
       </SidebarGroup>
       {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (

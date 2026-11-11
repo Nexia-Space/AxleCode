@@ -19,6 +19,7 @@ import { Route as CloudJobsRouteImport } from './routes/cloud-jobs'
 import { Route as ChatRouteImport } from './routes/_chat'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
 import { Route as SettingsSourceControlRouteImport } from './routes/settings.source-control'
+import { Route as SettingsRemoteAccessRouteImport } from './routes/settings.remote-access'
 import { Route as SettingsPluginsRouteImport } from './routes/settings.plugins'
 import { Route as SettingsPersonalizeRouteImport } from './routes/settings.personalize'
 import { Route as SettingsModelsRouteImport } from './routes/settings.models'
@@ -89,6 +90,11 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
 const SettingsSourceControlRoute = SettingsSourceControlRouteImport.update({
   id: '/source-control',
   path: '/source-control',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsRemoteAccessRoute = SettingsRemoteAccessRouteImport.update({
+  id: '/remote-access',
+  path: '/remote-access',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsPluginsRoute = SettingsPluginsRouteImport.update({
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/personalize': typeof SettingsPersonalizeRoute
   '/settings/plugins': typeof SettingsPluginsRoute
+  '/settings/remote-access': typeof SettingsRemoteAccessRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
   '/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/personalize': typeof SettingsPersonalizeRoute
   '/settings/plugins': typeof SettingsPluginsRoute
+  '/settings/remote-access': typeof SettingsRemoteAccessRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
   '/': typeof ChatIndexRoute
   '/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/settings/models': typeof SettingsModelsRoute
   '/settings/personalize': typeof SettingsPersonalizeRoute
   '/settings/plugins': typeof SettingsPluginsRoute
+  '/settings/remote-access': typeof SettingsRemoteAccessRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
   '/_chat/': typeof ChatIndexRoute
   '/_chat/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/personalize'
     | '/settings/plugins'
+    | '/settings/remote-access'
     | '/settings/source-control'
     | '/$environmentId/$threadId'
     | '/draft/$draftId'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/personalize'
     | '/settings/plugins'
+    | '/settings/remote-access'
     | '/settings/source-control'
     | '/'
     | '/$environmentId/$threadId'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/personalize'
     | '/settings/plugins'
+    | '/settings/remote-access'
     | '/settings/source-control'
     | '/_chat/'
     | '/_chat/$environmentId/$threadId'
@@ -487,6 +499,13 @@ declare module '@tanstack/react-router' {
       path: '/source-control'
       fullPath: '/settings/source-control'
       preLoaderRoute: typeof SettingsSourceControlRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/remote-access': {
+      id: '/settings/remote-access'
+      path: '/remote-access'
+      fullPath: '/settings/remote-access'
+      preLoaderRoute: typeof SettingsRemoteAccessRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/plugins': {
@@ -698,6 +717,7 @@ interface SettingsRouteChildren {
   SettingsModelsRoute: typeof SettingsModelsRoute
   SettingsPersonalizeRoute: typeof SettingsPersonalizeRoute
   SettingsPluginsRoute: typeof SettingsPluginsRoute
+  SettingsRemoteAccessRoute: typeof SettingsRemoteAccessRoute
   SettingsSourceControlRoute: typeof SettingsSourceControlRoute
 }
 
@@ -715,6 +735,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsModelsRoute: SettingsModelsRoute,
   SettingsPersonalizeRoute: SettingsPersonalizeRoute,
   SettingsPluginsRoute: SettingsPluginsRoute,
+  SettingsRemoteAccessRoute: SettingsRemoteAccessRoute,
   SettingsSourceControlRoute: SettingsSourceControlRoute,
 }
 
