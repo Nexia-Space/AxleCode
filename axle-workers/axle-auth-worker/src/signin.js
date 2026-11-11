@@ -214,8 +214,8 @@ function providerButtons(providers, target) {
 function shellStyles(nonce) {
   return `<style nonce="${nonce}">
 :root { color-scheme: dark light;
-  --background:#1a1a1a; --foreground:#ececec; --card:#222222; --accent:#2b2b2b;
-  --primary:#ececec; --primary-foreground:#1a1a1a; --muted-foreground:#969696;
+  --background:#181818; --foreground:#ececec; --card:#222222; --accent:#2b2b2b;
+  --primary:#ececec; --primary-foreground:#181818; --muted-foreground:#969696;
   --border:#2c2c2c; --input:#3d3d3d; --ring:#b5b5b5; --destructive:#ed7777;
   --radius:0.625rem;
   --font-sans:"Inter Variable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
