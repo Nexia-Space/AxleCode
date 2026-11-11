@@ -42,7 +42,7 @@ From `package.json` (root of `axle-desktop/source/`) — do not invent parallel 
 | `clean` | `rm -rf node_modules apps/*/node_modules …` (`:42`) | Nuke build outputs. Note: POSIX shell syntax — does not run on stock Windows shells. **[V]** |
 | `sync:repos` | `node scripts/sync-reference-repos.ts` (`:43`) | Syncs reference repos used by tooling. |
 
-Supporting scripts live in `scripts/` (all with co-located tests): `build-desktop-artifact.ts`, `dev-runner.ts`, `merge-update-manifests.ts`, `mobile-native-static-check.ts`, `mock-update-server.ts`, `notify-discord-release.ts`, `resolve-nightly-release.ts`, `resolve-previous-release-tag.ts`, `update-release-package-versions.ts`, `verify-github-oauth-build.mjs` **[V]**.
+Supporting scripts live in `scripts/` (all with co-located tests): `build-desktop-artifact.ts`, `dev-runner.ts`, `merge-update-manifests.ts`, `mock-update-server.ts`, `notify-discord-release.ts`, `resolve-nightly-release.ts`, `resolve-previous-release-tag.ts`, `update-release-package-versions.ts`, `verify-github-oauth-build.mjs` **[V]**.
 
 ## 10.3 CI inventory — what actually runs on GitHub
 
@@ -59,12 +59,12 @@ GitHub only executes workflows if they live in **the repository that holds them*
 | `plugin-auth-pr.yml` | (present) | Plugin-auth related PR checks **[V]** (contents not deep-read). |
 | `replay-pr20-main.yml` | (present) | Replay/backfill workflow **[V]** (contents not deep-read). |
 
-### Nested `axle-desktop/source/.github/workflows/` — 10 files — **never executed by GitHub** [F]
+### Nested `axle-desktop/source/.github/workflows/` — 6 files — **never executed by GitHub** [F]
 
 GitHub Actions reads workflows only from the repository root `.github/workflows/`. These nested files are dead as CI from GitHub's point of view, including:
 
 - **`ci.yml`** — the "real" gate (check job: `vp check`, `vpr typecheck`, `vp run build:desktop`, preload-bundle grep for `desktopBridge|getLocalEnvironmentBootstrap|PICK_FOLDER_CHANNEL|wsUrl`; test job: package tests). Runner `blacksmith-8vcpu-ubuntu-2404`, 10-min timeout each **[V]**.
-- `deploy-relay.yml`, `issue-labels.yml`, `mobile-eas-preview.yml`, `mobile-eas-production.yml`, `mobile-showcase-screenshots.yml`, `pr-size.yml`, `pr-vouch.yml`, `release.yml` **[V]**.
+- `deploy-relay.yml`, `issue-labels.yml`, `pr-size.yml`, `pr-vouch.yml`, `release.yml` **[V]**.
 
 **BOTTOM LINE [F]:** the only automated gate capable of catching the currently-failing server typecheck/tests exists at `axle-desktop/source/.github/workflows/ci.yml` and GitHub never runs it. This is the single highest-leverage structural fix in the delivery pipeline.
 
@@ -92,7 +92,7 @@ Because it is nested, this pipeline only runs if the source directory is ever pu
 | Root lint | `vp lint` | **[F] 4 hard errors** — `t3code(namespace-node-imports)` rule in account-api code + `schedules/Service.ts`. |
 | Download worker | `npm --prefix axle-download-worker test` | Only wired into the dormant installer CI job; not verified locally in this mission **[U]**. |
 | Relay | `infra/relay` deploy + tests | `scripts/deploy.test.ts` exists; runtime not exercised locally **[U]**. |
-| Mobile | EAS workflows (nested) | Not built locally **[U]**. |
+| Mobile | Separate AxleMobile repo + EAS | Not part of this repository; not built here. |
 
 Interpretation: the Rust core plane is the healthiest surface. The TS server plane's failures are dominated by one fixable test-harness omission plus a small set of real/branch-defect tests. None of the red state is caught by anything GitHub runs today (see §10.3).
 

@@ -7,7 +7,7 @@
 Axle is a **local-first desktop AI coding agent**: an Electron app whose real brain is a Rust agent runtime, whose control plane is a TypeScript server, and whose remote story is a Cloudflare relay. Two planes, one product:
 
 - **Agent plane (Rust, 10 crates, workspace v1.1.22):** turn loop, tool execution, approvals, sessions, compaction, memory, prompt assembly, provider adapters.
-- **Control plane (TS):** `apps/server` (WS RPC + HTTP + persistence + schedules + MCP server + terminal), `apps/web` (renderer), `apps/desktop` (Electron shell/IPC), `packages/contracts` (shared protocol), plus workers (`apps/account-api`, `axle-download-worker`), `infra/relay`, `apps/mobile`, `axle-landing`.
+- **Control plane (TS):** `apps/server` (WS RPC + HTTP + persistence + schedules + MCP server + terminal), `apps/web` (renderer), `apps/desktop` (Electron shell/IPC), `packages/contracts` (shared protocol), plus workers (`apps/account-api`, `axle-download-worker`), `infra/relay`, `axle-landing`.
 
 Canonical code root: `axle-desktop/source/` (its own `AGENTS.md` governs it). `axle-landing/` is separate (own AGENTS.md).
 
@@ -44,7 +44,7 @@ Canonical code root: `axle-desktop/source/` (its own `AGENTS.md` governs it). `a
 
 - **Turn:** user input → server command → adapter → agent loop → (approval channel if needed) → tool exec (`execution.rs:129-242`) → events stream back → web state. [Full: docs 02/04.]
 - **Schedule:** contract-defined schedule → `Schedules/Service.ts` poll `:42-43` → execution `:100-120` → turn dispatch → persistence `:162-172`. [Full: docs 02/07.]
-- **Remote:** mobile/remote client → relay (pairing + DPoP) → desktop local environment WS → same RPC surface. [Full: doc 05.]
+- **Remote:** mobile/remote client (separate AxleMobile repo) → relay (pairing + DPoP) → desktop local environment WS → same RPC surface. [Full: doc 05.]
 - **Compaction:** context pressure → session manager compacts oldest segments (`manager.rs:296-336…`) → summary entries replace raw history. [Full: docs 04/06.]
 
 ## 15.6 Invariants — break these and something subtle dies
@@ -82,7 +82,7 @@ Canonical code root: `axle-desktop/source/` (its own `AGENTS.md` governs it). `a
 
 - No runtime execution of the app was performed in this mission (except prior test/typecheck runs recorded in docs 10–11). All behavioral claims carry [V]/[I]/[U]/[F] tags.
 - The uncommitted WIP means `apps/web` descriptions reflect HEAD + WIP mixture — treated as WIP only.
-- Update/relay/mobile/APNs paths are source-read, not exercised.
+- Update/relay/APNs paths are source-read, not exercised.
 - Unknowns register: doc 14. If you resolve one, update that doc and the affected numbered doc, then the index.
 
 ## 15.10 Dossier navigation

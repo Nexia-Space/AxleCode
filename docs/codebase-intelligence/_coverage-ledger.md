@@ -55,17 +55,17 @@ Last updated: 2026-10-13 (late evening, Africa/Lagos).
 
 ## Areas inspected (running log, condensed)
 - Instructions/docs: `axle-desktop/source/AGENTS.md`, `axle-landing/AGENTS.md`, `CLAUDE.md` (pointer), root + source `README.md`, `AXLE_IMPLEMENTATION.md`, `docs/axle-architecture.md`, `docs/axle-configuration.md`.
-- Manifests: root `Cargo.toml` (10 crates, v1.1.22), `pnpm-workspace.yaml` (catalog pins, alchemy stub, 14 patches), `package.json` scripts (`package.json:7-43`), per-app package.json files, `infra/relay` package + drizzle, `axle-download-worker`, mobile.
+- Manifests: root `Cargo.toml` (10 crates, v1.1.22), `pnpm-workspace.yaml` (catalog pins, alchemy stub, 5 patches), `package.json` scripts (`package.json:7-43`), per-app package.json files, `infra/relay` package + drizzle, `axle-download-worker`, mobile.
 - Rust: agent loop `loop_runner.rs`, tools (`registry.rs`, `bash.rs`, `write.rs`, `edit.rs`, `mcp.rs`, `path_guard.rs`, `execution.rs`), sessions (`manager.rs`, `engine.rs`), prompt (`builder.rs`), config (`axle_config`), memory (`axle_memory`).
 - TS server: `ws.ts` (method table + handlers), `http.ts` (routes, OTLP proxy), `httpCors.ts`, `startupAccess.ts`, `AxleAdapter.ts`, `schedules/Service.ts`, `terminal/Manager.ts`, `McpHttpServer.ts`, `serverLogger.ts`, migrations `001–032` (+ migration tests).
 - Contracts: `orchestration.ts` (WS methods, policies, ModelSelection, commands, events, duplicated shell block), `auth.ts` (scopes), `schedules.ts`; 47 module names listed.
 - Web: routes (10 top-level + settings children), `AppRoot.tsx:17-30`, `index.css:204-283` tokens, state/hooks/connection/lib directory inventories.
 - Desktop: launcher home layout (`launcher.ts:41-58`), preload bundle markers.
-- Infra/CI: root `.github/workflows` (6) + nested source workflows (10, incl. `ci.yml`, `release.yml`), `scripts/` (build artifact, dev-runner, update manifests, release smoke, mock update server, mobile checks), `.circleci` presence, `infra/relay` deploy script.
+- Infra/CI: root `.github/workflows` (6) + nested source workflows (6, incl. `ci.yml`, `release.yml`), `scripts/` (build artifact, dev-runner, update manifests, release smoke, mock update server), `.circleci` presence, `infra/relay` deploy script.
 - Tests/typecheck runs recorded in docs 10–11 (same tree, same machine, earlier in mission).
 
 ## Unresolved questions (final register)
-All open items now live in `14-open-questions-and-unknowns.md` (Q1–Q22; Q7 resolved 2026-10-18), including: canonical release repo; UI-redesign release intent; version drift cause; alchemy stub fidelity; `stream_parser.rs` per-provider formats; web WS reconnect policy; analytics privacy; rate limiting; orphan process reaping; SQLite journaling/busy timeout; per-turn caps; scope↔method coverage; a11y; mobile E2E; relay deployment state; other infra surfaces + `.circleci`; download worker runtime; account-api role; Windows test-failure reality; instruction/skill discovery precedence.
+All open items now live in `14-open-questions-and-unknowns.md` (Q1–Q22; Q7 resolved 2026-10-18), including: canonical release repo; UI-redesign release intent; version drift cause; alchemy stub fidelity; `stream_parser.rs` per-provider formats; web WS reconnect policy; analytics privacy; rate limiting; orphan process reaping; SQLite journaling/busy timeout; per-turn caps; scope↔method coverage; a11y; mobile E2E (external repo); relay deployment state; other infra surfaces + `.circleci`; download worker runtime; account-api role; Windows test-failure reality; instruction/skill discovery precedence.
 
 ## Method notes / lessons
 - `rg` on Windows PowerShell: exclude `-g "!node_modules" -g "!target" -g "!.git" -g "!.next"`; list `.rs` files explicitly (PowerShell globs don't expand in rg paths).

@@ -50,7 +50,6 @@ Workspace globs (`pnpm-workspace.yaml`): `apps/*`, `infra/*`, `oxlint-plugin-t3c
 | `apps/server` | `t3` (bin `axle`) | The orchestration server **and** the npm-distributed launcher (`src/launcher.ts`) that installs/locates the Rust runtime and Electron app. Entry `src/bin.ts` (Effect CLI `t3` with `start`/`serve`/`project`), HTTP routes/WS in `src/http.ts`/`src/ws.ts`, provider adapters in `src/provider/`, MCP in `src/mcp/`, persistence in `src/persistence/`, orchestration in `src/orchestration/` |
 | `apps/web` | `@axle/web` | React SPA (TanStack Router file routes in `src/routes/`), 12 top-level routes, Tailwind v4, Zustand, Effect Atom |
 | `apps/desktop` | `@axle/desktop` | Electron main process (`src/main.ts`, `src/preload.ts`), IPC handlers, SSH/WSL/preview/updates integrations, electron-builder config |
-| `apps/mobile` | mobile app | Expo/EAS React Native client: threads, terminal, diffs, review, agent-awareness; native widgets |
 | `apps/account-api` | — | Small account API package (~1k LOC) |
 | `apps/marketing` | — | Marketing app inside the workspace |
 
@@ -59,7 +58,7 @@ Workspace globs (`pnpm-workspace.yaml`): `apps/*`, `infra/*`, `oxlint-plugin-t3c
 | Path | Role |
 | --- | --- |
 | `packages/contracts` | 47 modules; the shared contract layer (Effect Schema): orchestration, provider, providerRuntime, relay, schedules, terminal, git, vcs, preview, settings, keybindings, rpc, ipc, environment, assets, auth, model, memory, review, sourceControl, remoteAccess, desktopBootstrap. `index.ts` re-exports all |
-| `packages/client-runtime` | 130 files: client-side runtime (connection, RPC client, session state) used by web/desktop/mobile |
+| `packages/client-runtime` | 130 files: client-side runtime (connection, RPC client, session state) used by web/desktop |
 | `packages/shared` | 86 files: cross-cutting utilities (schemaJson, hostProcess, Net, …) |
 | `packages/ssh` | SSH transport support for remote environments |
 | `packages/tailscale` | Tailscale integration for remote reach |
@@ -74,7 +73,7 @@ Workspace globs (`pnpm-workspace.yaml`): `apps/*`, `infra/*`, `oxlint-plugin-t3c
 | `experiments/` | Scratch area (not part of deployed surface) |
 | `update-portal/` | Update portal assets for the desktop updater flow |
 | `oxlint-plugin-t3code` | Custom lint plugin enforcing repo-specific rules (e.g. `namespace-node-imports`) |
-| `patches/` | pnpm patched dependencies (14 patches incl. effect, expo, react-native) |
+| `patches/` | pnpm patched dependencies (5 patches: effect, @effect/vitest, @ff-labs/fff-node, @legendapp/list, @pierre/diffs) |
 
 ## 4. Executable entry points (startup map)
 
@@ -85,7 +84,6 @@ Workspace globs (`pnpm-workspace.yaml`): `apps/*`, `infra/*`, `oxlint-plugin-t3c
 | npm launcher | `apps/server/src/launcher.ts` (build output `dist/launcher.mjs`, bin name `axle`) | Installed via npm; resolves `AXLE_HOME` (legacy `RIVET_HOME`, `T3CODE_HOME`), lays out `userdata/`, `caches/`, `worktrees/`, `memory/`, `launcher/`, then starts server/desktop |
 | Desktop app | `apps/desktop/src/main.ts` (Electron main; `dist-electron/main.cjs`) | Electron via `scripts/start-electron.mjs`; packaged by electron-builder |
 | Web app | `apps/web/src/AppRoot.tsx` + file routes | Served by the server; Vite build |
-| Mobile app | Expo entry under `apps/mobile` | EAS workflows `mobile-eas-preview.yml` / `mobile-eas-production.yml` |
 | Auth worker | `axle-auth-worker/src/entry.js` (index/app/final modules) | Cloudflare deploy |
 | Relay | `infra/relay/src/worker.ts` | Cloudflare via `alchemy.run.ts` + `scripts/deploy.ts` |
 | Download worker | `axle-download-worker/src/index.js` | Cloudflare deploy |

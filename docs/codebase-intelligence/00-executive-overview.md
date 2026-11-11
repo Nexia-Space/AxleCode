@@ -13,7 +13,7 @@ An AI coding agent that runs locally on the user's machine and is driven from a 
 - Product statement: `README.md` — "An AI engineer that lives on your computer… desktop app (Windows, macOS, Linux)… runs locally on your computer, and the only network traffic is the model calls you make with your own key." **[V]**
 - The runtime that actually calls models, runs tools, and persists sessions is a Rust binary, `axle`, built from `crates/axle_cli/src/main.rs`. It speaks an NDJSON event protocol on stdout when started with `--json-stream`. **[V]**
 - The orchestration layer is a TypeScript server (`axle-desktop/source/apps/server`, package name `t3`, bin `axle` → `dist/launcher.mjs`) that owns conversations ("threads"), turns, checkpoints, provider processes, MCP tool exposure, schedules, terminals, and an SQLite projection database. **[V]**
-- Three clients exist: Electron desktop shell (`axle-desktop/source/apps/desktop`), React web UI (`apps/web`), Expo mobile app (`apps/mobile`). **[V]**
+- Two clients live in this repository: Electron desktop shell (`axle-desktop/source/apps/desktop`) and React web UI (`apps/web`). The mobile companion app is a separate repository (`AxleMobile`). **[V]**
 - Three cloud/edge services exist: an auth + plugin-OAuth Cloudflare Worker (`axle-auth-worker`), the device↔environment relay (`axle-desktop/source/infra/relay`, package `t3code-relay`, Effect + Alchemy + Postgres/Drizzle + APNs), and a release/download worker (`axle-download-worker`). Analytics/releases live in `axle-analytics` (Convex). Marketing site: `axle-landing`. **[V]**
 
 Legacy naming is deliberate and must be preserved: internal identifiers `t3`, `@t3tools/*`, `T3CODE_*`, `~/.t3`, `pingdotgg/t3code` repository URL in `apps/server/package.json:6`, `.t3` directories, and `RIVET_HOME` compatibility remain per `axle-desktop/source/AGENTS.md` and rebrand-compatibility code such as `apps/server/src/launcher.ts:41-58` (`AXLE_HOME`, `RIVET_HOME`, `T3CODE_HOME`, homes `.Axle`/`.Rivet`/`.sparky-desktop`/`.t3`). **[V]**
@@ -26,7 +26,7 @@ Legacy naming is deliberate and must be preserved: internal identifiers `t3`, `@
 | Server | TypeScript, Effect 4.0.0-beta.78 (services/layers/routers), SQLite (`@effect/sql-sqlite-bun`), node-pty, playwright-core, electron-updater |
 | Web | React 19.2.6, TanStack Router, Tailwind CSS v4, Zustand, Lexical editor, xterm, framer-motion, @pierre/diffs |
 | Desktop | Electron 41.5.0, electron-builder, electron-store, SSH + Tailscale workspace packages |
-| Mobile | Expo/React Native (EAS build profiles), native widgets |
+| Mobile (external) | Separate Expo/React Native repository (EAS build profiles), native widgets |
 | Cloud | Cloudflare Workers (auth worker, relay, download worker), Alchemy IaC, Drizzle + Postgres (relay), Effect HttpApi, APNs push, Convex (analytics) |
 | Toolchain | pnpm 11 via `vite-plus` (`vp`) with `catalog:` pinning; tsgo typecheck; oxlint + custom `oxlint-plugin-t3code` |
 
@@ -65,7 +65,6 @@ They meet at the NDJSON boundary implemented in `apps/server/src/provider/Layers
 | Server orchestration/persistence | High design, medium health — rich event-sourcing + projections; failing tests/typecheck | `apps/server/src/orchestration`, `persistence` |
 | Desktop shell | Medium-high — updater, IPC, SSH, WSL, preview all present; `desktop` typecheck passes | `apps/desktop/src` |
 | Web UI | Medium-high — full route tree; WIP redesign; `apps/web` typecheck passes | `apps/web/src/routes` |
-| Mobile | Medium — Expo app with 90 test files; delivery via EAS workflows | `apps/mobile` |
 | Cloud services | Medium — auth worker tests 21/21 green; relay is newer (2026-05→07 migrations) and unverified locally | `axle-auth-worker`, `infra/relay` |
 | CI/release | Low — release workflow exists (tag + nightly cron + manual dispatch); quality gate effectively absent | `.github/workflows/*` |
 

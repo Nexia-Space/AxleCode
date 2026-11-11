@@ -86,7 +86,7 @@ The contract is the source of truth; everything else follows it.
 4. Approval stuck? Inspect approval channel handling in `loop_runner.rs:2186-2274` and the approval flow in doc 04.
 
 ### N. Add/verify mobile behavior
-- `apps/mobile` + mobile scripts (`mobile-native-static-check.ts` — run it: `pnpm lint:mobile`), EAS workflows are nested (doc 10 §10.3). Not verifiable end-to-end locally without EAS.
+- The mobile companion app lives in the separate AxleMobile repository (Expo app, EAS workflows); it is no longer part of this monorepo.
 
 ### O. Tests & deploys
 - Run per doc 10 §10.9. Remember: CI does not currently run (P0). Verify locally.

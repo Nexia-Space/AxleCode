@@ -12,7 +12,7 @@ Last updated: 2026-10-12.
 
 Axle is an AI engineering workspace: a desktop app that pairs a Rust agent
 runtime (the `axle` CLI) with a server that owns orchestration, approvals,
-checkpoints and persistence, plus web and mobile frontends.
+checkpoints and persistence, plus a web frontend.
 
 - Rust runtime (`crates/axle_*`): provider adapters (`axle_ai`), tool registry
   and built-ins plus MCP (`axle_tools`), agent loop (`axle_agent`), sessions
@@ -22,8 +22,8 @@ checkpoints and persistence, plus web and mobile frontends.
 - Desktop (`axle-desktop/source/apps/desktop` + `apps/server`): Electron shell,
   orchestration, approvals, SQLite persistence projections, terminal Manager,
   GitManager, MCP server and toolkits.
-- Frontends: web (`apps/web`), mobile (`apps/mobile`), marketing site
-  (`apps/marketing`), account API (`apps/account-api`).
+- Frontends: web (`apps/web`), marketing site (`apps/marketing`), account API
+  (`apps/account-api`).
 
 ## Architecture snapshot
 
@@ -77,7 +77,7 @@ Two exceptions are kept on purpose and are isolated in this document:
   identifiers always win, legacy locations are left untouched, and every shim
   is covered by a test or a migration.
 - **T3 contractual identifiers** (`T3CODE_*`, `@t3tools/*`, `~/.t3`,
-  `t3code.*` mobile storage keys, `/api/t3-connect/*`, the `t3` server package
+  `t3code.*` client storage keys, `/api/t3-connect/*`, the `t3` server package
   name, `oxlint-plugin-t3code`) belong to an external integration contract —
   see `axle-desktop/source/AGENTS.md`. They are not Axle branding and must not
   be renamed.

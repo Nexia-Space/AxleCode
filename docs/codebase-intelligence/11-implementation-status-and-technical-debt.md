@@ -20,7 +20,7 @@
 | 10 | Preview system | **WORKING (unverified locally)** | Documented in doc 03 F13; no local run. |
 | 11 | Desktop shell + IPC | **WORKING (unverified locally)** | Preload/desktop-bridge assertions exist in the (dead) CI; bundle grep markers known. |
 | 12 | Web UI (renderer) | **PARTIAL / WIP** | Typecheck passes at `HEAD`; the working tree currently carries a large uncommitted redesign (154 M + 8 untracked). Status of the WIP itself: unknown — not this mission's code. |
-| 13 | Mobile app | **UNKNOWN** | EAS workflows exist (nested); never built in this mission. |
+| 13 | Mobile app | **EXTRACTED** | Lives in the separate AxleMobile repository; no longer part of this codebase. |
 | 14 | Relay (`infra/relay`) | **UNKNOWN (runtime)** | Source + drizzle migrations + deploy script read; the worker has not been deployed or run locally. |
 | 15 | Auth worker | **VERIFIED WORKING** | 21/21 tests pass. |
 | 16 | GitHub auth broker | **WORKING (unverified locally)** | Security workflow exists in root CI; flows documented (doc 05/09). |
@@ -56,7 +56,7 @@
 ## 11.3 Features shipped vs stubbed vs absent (roll-up of doc 03)
 
 - Shipped and covered by Rust tests: chat turning, plan mode, approvals, tool suite, sessions/history, compaction, checkpoints, model config, terminal, git/PR flows, hook system, MCP both directions, schedules (agent-side), remote access protocol, instructions/skills loading.
-- Shipped but unverified locally: memory end-to-end, preview, plugin OAuth worker, relay, mobile, analytics, download portal, desktop IPC.
+- Shipped but unverified locally: memory end-to-end, preview, plugin OAuth worker, relay, analytics, download portal, desktop IPC.
 - Absent: billing/quota, team/org administration beyond accounts, marketplace publishing pipeline for plugins [I].
 - WIP (not part of this mission's code): UI redesign in working tree.
 
@@ -73,7 +73,7 @@
 | --- | --- | --- |
 | Relay worker end-to-end | Not deployed locally | `infra/relay`: run drizzle migrate + `deploy.ts` dry-run against miniflare/dev; exercise DPoP + pairing endpoints. |
 | APNs push path | Requires Apple credentials | Unit-level: inspect notification payload construction; simulate with mock APNs. |
-| Mobile builds | EAS + native toolchains | Run `mobile-native-static-check.ts` locally (script exists) then EAS preview. |
+| Mobile builds | Separate repo + EAS | Build and verify in the AxleMobile repository. |
 | Alchemy deploy path | Stubbed dependency | Compare `stubs/alchemy-stub` API surface vs real SDK version pinned in lockfile. |
 | Download worker tests | CI job dormant | `npm --prefix axle-download-worker test` locally. |
 | Update/auto-update flow | Needs packaged build | `mock-update-server.ts` + `release:smoke` against a local artifact. |
@@ -95,4 +95,4 @@
 3. Fix the 4 lint errors; then ratchet lint to zero-warnings for touched packages.
 4. Squash or commit the UI-redesign WIP so measurements become reproducible.
 5. Reconcile version strings + repo slug; decide the canonical release home (doc 14 Q1).
-6. Schedule a relay/mobile/update-path verification spike (§11.5) and record results here.
+6. Schedule a relay/APNs/update-path verification spike (§11.5) and record results here.

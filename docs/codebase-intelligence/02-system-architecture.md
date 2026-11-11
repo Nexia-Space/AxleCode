@@ -20,7 +20,7 @@ flowchart TB
   subgraph Clients
     WEB["Web UI (apps/web)<br/>React + TanStack Router"]
     DESK["Desktop shell (apps/desktop)<br/>Electron main + IPC"]
-    MOB["Mobile app (apps/mobile)<br/>Expo / RN"]
+    MOB["Mobile app (separate AxleMobile repo)<br/>Expo / RN"]
   end
 
   subgraph Orchestration["Orchestration plane — apps/server (package t3)"]
@@ -156,7 +156,7 @@ flowchart LR
   web["@axle/web"]
   server["t3 (apps/server)"]
   desktop["@axle/desktop"]
-  mobile["apps/mobile"]
+  mobile["mobile app (separate repo)"]
   relay["t3code-relay"]
 
   contracts --> shared
@@ -221,5 +221,5 @@ flowchart LR
 1. **Client → server**: contracts in `@axle/contracts` (Effect Schema); WS + HTTP; scoped auth (`AuthOrchestrationReadScope` / `AuthOrchestrationOperateScope`, `http.ts:200-246`). **[V]**
 2. **Server → agent**: argv flags + stdin prompt + NDJSON stdout + approval file + env (`T3_MCP_BEARER_TOKEN`). **[V]**
 3. **Agent → server**: HTTP MCP calls (bearer), tool results. **[V]**
-4. **Server → cloud**: auth worker (session/MCP/plugin endpoints), GitHub API, Expo/APNs via relay. **[V]** for endpoints listed in `axle-auth-worker/src` and relay routes.
+4. **Server → cloud**: auth worker (session/MCP/plugin endpoints), GitHub API, APNs via relay. **[V]** for endpoints listed in `axle-auth-worker/src` and relay routes.
 5. **Mobile → relay → environment**: relay `RelayApi` + DPoP; relay stores device registrations and APNs deliveries in Postgres. **[V]**

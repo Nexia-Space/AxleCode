@@ -75,8 +75,8 @@ The ChatGPT-plan OAuth provider, its login routes, and its token-storage path we
 **Resolve by:** axe/Lighthouse pass on the main routes after WIP settles.
 
 ## Q16 — Mobile end-to-end? APNs? 
-**Known [V]:** EAS workflows exist (nested); APNs-related relay columns (`bundle_id`, `aps_environment`) exist. No build/run verification ([U]). Apple credentials existence unknown.
-**Resolve by:** run EAS preview build; send a test push via relay in dev.
+**Known [V]:** the mobile app lives in the separate AxleMobile repository; APNs-related relay columns (`bundle_id`, `aps_environment`) remain in this repo. No build/run verification here ([U]). Apple credentials existence unknown.
+**Resolve by:** run an EAS preview build from AxleMobile; send a test push via relay in dev.
 
 ## Q17 — Relay deployed and current?
 **Known [V]:** relay source + migrations + deploy script + workflow exist. Actual deployment state, worker version, and whether `deploy-relay.yml` has ever run (nested workflow!) is [U].

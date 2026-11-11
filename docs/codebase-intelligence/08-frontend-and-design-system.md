@@ -73,4 +73,4 @@ Key components (all under `apps/web/src/components/`): `ChatView.tsx` (streaming
 
 - A large uncommitted redesign touches 154 files, heavily `apps/web/src/components/*` (ChatView, BranchToolbar, DiffPanel, CommandPalette, sidebar, etc.) plus `ui-redesign-*.md` notes at the TS workspace root. Treat the committed UI as ground truth; the working tree shows an in-flight visual overhaul whose intent is documented only in those markdown files (not read in this pass).
 - Demo mode is a real mocked-data surface (`src/demo`, MSW); never cite demo behavior as product behavior.
-- Mobile UI parity is not established; mobile has its own feature set under `apps/mobile/src/features/` (agent-awareness, threads, terminal, diffs, review).
+- Mobile UI parity is not established; the mobile companion has its own feature set in the separate AxleMobile repository (`src/features/`: agent-awareness, threads, terminal, diffs, review).

@@ -123,7 +123,7 @@ Each feature lists: purpose → files → execution trace → status.
 ## F18 — Mobile companion features
 
 **Purpose:** monitor and steer agent work from a phone.
-**Files:** `apps/mobile/src/features/*` (agent-awareness, threads, terminal, diffs, review), native widgets; relay `agentActivity/*` (AgentActivityPublisher, ApnsClient, ApnsDeliveries, LiveActivities, Devices).
+**Files:** mobile companion app in the separate `AxleMobile` repository (`src/features/*`: agent-awareness, threads, terminal, diffs, review), native widgets; relay `agentActivity/*` (AgentActivityPublisher, ApnsClient, ApnsDeliveries, LiveActivities, Devices).
 **Status:** IMPLEMENTED (needs a device to verify push end-to-end). **[U]** for APNs credentials in this environment.
 
 ## F19 — Extensions
