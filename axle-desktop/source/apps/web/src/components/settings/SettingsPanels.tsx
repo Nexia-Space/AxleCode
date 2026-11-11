@@ -1,4 +1,11 @@
-import { ArchiveIcon, ArchiveX, LoaderIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
+import {
+  ArchiveIcon,
+  ArchiveX,
+  LoaderIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  SmartphoneIcon,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
@@ -60,7 +67,7 @@ import {
   primaryServerProvidersAtom,
   serverEnvironment,
 } from "../../state/server";
-import { usePrimaryEnvironment } from "../../state/environments";
+import { useEnvironmentHttpBaseUrl, usePrimaryEnvironment } from "../../state/environments";
 import { useProjects } from "../../state/entities";
 import { useArchivedThreadSnapshots } from "../../lib/archivedThreadsState";
 import { formatRelativeTimeLabel, getRelativeTimeState } from "../../timestampFormat";
@@ -94,6 +101,7 @@ import {
 import { ProjectFavicon } from "../ProjectFavicon";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { ThemePreferenceControl } from "./ThemePreferenceControl";
+import { MobilePairingDialog } from "./MobilePairingDialog";
 
 const TIMESTAMP_FORMAT_LABELS = {
   locale: "System default",
@@ -981,6 +989,9 @@ function RemoteAccessSettingsSection() {
   const networkAccess = useAtomValue(desktopNetworkAccessStateAtom);
   const [isChangingMode, setIsChangingMode] = useState(false);
   const [isChangingTailscale, setIsChangingTailscale] = useState(false);
+  const [isMobilePairingOpen, setIsMobilePairingOpen] = useState(false);
+  const primaryEnvironment = usePrimaryEnvironment();
+  const primaryHttpBaseUrl = useEnvironmentHttpBaseUrl(primaryEnvironment?.environmentId ?? null);
   const snapshot = AsyncResult.getOrElse(networkAccess, () => null);
   const exposure = snapshot?.serverExposureState ?? null;
   const isNetworkAccessible = exposure?.mode === "network-accessible";
@@ -1085,36 +1096,59 @@ function RemoteAccessSettingsSection() {
         : "This server is only reachable from this computer.";
 
   return (
-    <SettingsSection title="Remote access">
-      <SettingsRow
-        title="Share on local network"
-        description={endpointDescription}
-        control={
-          <Switch
-            checked={isNetworkAccessible}
-            disabled={exposure === null || isChangingMode}
-            onCheckedChange={(checked) => handleModeChange(Boolean(checked))}
-            aria-label="Share on local network"
-          />
-        }
+    <>
+      <SettingsSection title="Remote access">
+        <SettingsRow
+          title="Share on local network"
+          description={endpointDescription}
+          control={
+            <Switch
+              checked={isNetworkAccessible}
+              disabled={exposure === null || isChangingMode}
+              onCheckedChange={(checked) => handleModeChange(Boolean(checked))}
+              aria-label="Share on local network"
+            />
+          }
+        />
+        <SettingsRow
+          title="Share over Tailscale"
+          description={
+            exposure?.tailscaleServeEnabled === true
+              ? `Tailscale Serve is on (port ${exposure.tailscaleServePort}).`
+              : "Serve this server to other devices on your tailnet with Tailscale."
+          }
+          control={
+            <Switch
+              checked={exposure?.tailscaleServeEnabled ?? false}
+              disabled={exposure === null || isChangingTailscale}
+              onCheckedChange={(checked) => handleTailscaleChange(Boolean(checked))}
+              aria-label="Share over Tailscale"
+            />
+          }
+        />
+        <SettingsRow
+          title="Connect mobile device"
+          description="Pair Axle Mobile with this desktop to access the same threads, files, terminals, and providers."
+          control={
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={exposure === null}
+              onClick={() => setIsMobilePairingOpen(true)}
+            >
+              <SmartphoneIcon />
+              Show QR code
+            </Button>
+          }
+        />
+      </SettingsSection>
+      <MobilePairingDialog
+        open={isMobilePairingOpen}
+        onOpenChange={setIsMobilePairingOpen}
+        endpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
+        networkAccessible={isNetworkAccessible || exposure?.tailscaleServeEnabled === true}
       />
-      <SettingsRow
-        title="Share over Tailscale"
-        description={
-          exposure?.tailscaleServeEnabled === true
-            ? `Tailscale Serve is on (port ${exposure.tailscaleServePort}).`
-            : "Serve this server to other devices on your tailnet with Tailscale."
-        }
-        control={
-          <Switch
-            checked={exposure?.tailscaleServeEnabled ?? false}
-            disabled={exposure === null || isChangingTailscale}
-            onCheckedChange={(checked) => handleTailscaleChange(Boolean(checked))}
-            aria-label="Share over Tailscale"
-          />
-        }
-      />
-    </SettingsSection>
+    </>
   );
 }
 
