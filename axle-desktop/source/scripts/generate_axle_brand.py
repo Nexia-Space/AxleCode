@@ -3,7 +3,7 @@
 MARK_PATHS holds a two-subpath vector trace of the approved artwork (a petal
 above a swoosh). This script is the single source of truth for the mark: icons,
 favicons, wordmark SVGs, ICO and ICNS archives across every channel
-(production, nightly, development, web, marketing, desktop, mobile) are all
+(production, nightly, development, web, marketing, desktop) are all
 rendered from these two paths. Vector and raster emitters share one flattened
 geometry, so shapes never drift between formats.
 
@@ -171,6 +171,14 @@ def render_knockout(size: int, *, radius_frac: float = 10 / 128, supersample: in
     return tile.resize((size, size), Image.LANCZOS)
 
 
+def render_favicon_tile(size: int, *, supersample: int = 4) -> Image.Image:
+    """Render the public favicon.svg artwork as a raster app icon."""
+    big = size * supersample
+    tile = Image.new("RGBA", (big, big), (0, 0, 0, 255))
+    tile.alpha_composite(render(big, frac=0.60, color=WHITE, supersample=1))
+    return tile.resize((size, size), Image.LANCZOS)
+
+
 def write_png(path: Path, image: Image.Image) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, format="PNG", optimize=True)
@@ -181,8 +189,8 @@ def write_webp(path: Path, image: Image.Image) -> None:
     image.save(path, format="WEBP", quality=90, method=6)
 
 
-def write_ico(path: Path, sizes: tuple[int, ...] = ICO_SIZES) -> None:
-    images = [render(size, supersample=8 if size <= 64 else 4) for size in sizes]
+def write_ico(path: Path, sizes: tuple[int, ...] = ICO_SIZES, renderer=render) -> None:
+    images = [renderer(size, supersample=8 if size <= 64 else 4) for size in sizes]
     path.parent.mkdir(parents=True, exist_ok=True)
     images[-1].save(
         path,
@@ -192,12 +200,12 @@ def write_ico(path: Path, sizes: tuple[int, ...] = ICO_SIZES) -> None:
     )
 
 
-def write_icns(path: Path, renditions: tuple[tuple[str, int], ...] = ICNS_RENDITIONS) -> None:
+def write_icns(path: Path, renditions: tuple[tuple[str, int], ...] = ICNS_RENDITIONS, renderer=render) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     archive = icnsutil.IcnsFile()
     for file_type, size in renditions:
         buffer = io.BytesIO()
-        render(size).save(buffer, format="PNG", optimize=True)
+        renderer(size, supersample=1).save(buffer, format="PNG", optimize=True)
         archive.add_media(file_type, data=buffer.getvalue(), force=True)
     archive.write(str(path))
 
@@ -278,7 +286,6 @@ def main() -> None:
     marketing = ROOT / "apps" / "marketing" / "public"
     desktop_resources = ROOT / "apps" / "desktop" / "resources"
     desktop_assets = ROOT / "apps" / "desktop" / "assets"
-    mobile_assets = ROOT / "apps" / "mobile" / "assets"
 
     icon_1024 = render(1024)
     write_png(prod / "axle-logo-source.png", render(1254, frac=0.5455))
@@ -346,20 +353,18 @@ def main() -> None:
     write_webp(marketing / "apple-touch-icon.webp", render(180))
     write_ico(marketing / "favicon.ico")
 
-    write_png(desktop_resources / "icon.png", icon_1024)
-    write_ico(desktop_resources / "icon.ico")
-    write_icns(desktop_resources / "icon.icns")
-    write_png(desktop_assets / "icon.png", icon_1024)
-    write_ico(desktop_assets / "icon.ico")
+    desktop_icon = render_favicon_tile(1024)
+    write_png(desktop_resources / "icon.png", desktop_icon)
+    write_ico(desktop_resources / "icon.ico", renderer=render_favicon_tile)
+    write_icns(desktop_resources / "icon.icns", renderer=render_favicon_tile)
+    write_png(desktop_assets / "icon.png", desktop_icon)
+    write_ico(desktop_assets / "icon.ico", renderer=render_favicon_tile)
 
-    write_png(mobile_assets / "android-icon-mark.png", render(432, frac=0.646, color=WHITE))
-    write_png(mobile_assets / "android-notification-icon.png", render(96, frac=0.667, color=WHITE))
-
-    write_text(
-        ROOT / "favicon.svg",
-        tile_svg_document(size=128, radius=10, background="#000000", fill="#ffffff", box_frac=0.60),
+    favicon_document = tile_svg_document(
+        size=128, radius=10, background="#000000", fill="#ffffff", box_frac=0.60
     )
-    write_text(mobile_assets / "widget" / "T3Mark.svg", widget_svg_document())
+    write_text(ROOT / "favicon.svg", favicon_document)
+    write_text(web_public / "favicon.svg", favicon_document)
 
     for channel, svg_size in ((prod, 77), (dev, 128), (nightly, 128)):
         fill = "#171717" if channel == prod else "#ffffff"
