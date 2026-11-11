@@ -569,6 +569,7 @@ pre {
 
 .auth-form input {
   width: 100%;
+  flex: 0 0 auto;
   padding: 8px 10px;
   background: var(--card-2);
   border: 1px solid var(--input);
