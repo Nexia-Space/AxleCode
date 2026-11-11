@@ -43,6 +43,10 @@ export class DesktopBackendConfiguration extends Context.Service<
       DesktopBackendManager.DesktopBackendStartConfig,
       PlatformError.PlatformError
     >;
+    /** Resolve the already-running user daemon, if one is discoverable. */
+    readonly resolveDaemon: Effect.Effect<
+      Option.Option<DesktopBackendManager.DesktopBackendStartConfig>
+    >;
     // Build a WSL backend start config for the given distro on the given
     // port. The WSL backend is always loopback-only (the primary owns LAN
     // exposure when the user opts in), so this takes the port directly and
@@ -102,6 +106,15 @@ const WSL_FORWARDED_ENV_NAMES = [
 ] as const;
 
 const WSL_SERVER_SYSTEM_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+const DaemonRuntimeState = Schema.Struct({
+  role: Schema.Literal("daemon"),
+  port: Schema.Int,
+  origin: Schema.String,
+});
+const decodeDaemonRuntimeState = Schema.decodeUnknownEffect(
+  Schema.fromJsonString(DaemonRuntimeState),
+);
 
 const backendChildEnvPatch = (): Record<string, string | undefined> =>
   Object.fromEntries(DESKTOP_BACKEND_ENV_NAMES.map((name) => [name, undefined]));
@@ -660,6 +673,47 @@ export const make = Effect.gen(function* () {
     );
   });
 
+  const resolveDaemon = Effect.gen(function* () {
+    const runtimePath = environment.path.join(environment.stateDir, "server-runtime.json");
+    const tokenPath = environment.path.join(environment.stateDir, "daemon-desktop-token");
+    const runtime = yield* fileSystem.readFileString(runtimePath).pipe(
+      Effect.flatMap((raw) => decodeDaemonRuntimeState(raw)),
+      Effect.option,
+    );
+    if (Option.isNone(runtime)) return Option.none();
+
+    const token = yield* fileSystem.readFileString(tokenPath).pipe(
+      Effect.map((value) => value.trim()),
+      Effect.option,
+    );
+    if (Option.isNone(token) || token.value.length === 0) return Option.none();
+
+    const httpBaseUrl = new URL(runtime.value.origin);
+    return Option.some({
+      executablePath: "",
+      args: [],
+      entryPath: "",
+      cwd: environment.backendCwd,
+      env: {},
+      extendEnv: false,
+      external: true,
+      bootstrap: {
+        mode: "desktop" as const,
+        noBrowser: true,
+        port: runtime.value.port,
+        t3Home: environment.baseDir,
+        host: "127.0.0.1",
+        desktopBootstrapToken: token.value,
+        tailscaleServeEnabled: false,
+        tailscaleServePort: 443,
+      },
+      bootstrapDelivery: "fd3" as const,
+      httpBaseUrl,
+      captureOutput: false,
+      preflightFailure: Option.none(),
+    } satisfies DesktopBackendManager.DesktopBackendStartConfig);
+  });
+
   // Single source of truth for what the primary actually runs as. Both
   // the start-config dispatch and the renderer-facing label derive from
   // this, so they can't disagree — e.g. the label reading "WSL" while the
@@ -681,6 +735,9 @@ export const make = Effect.gen(function* () {
   });
 
   return DesktopBackendConfiguration.of({
+    resolveDaemon: resolveDaemon.pipe(
+      Effect.withSpan("desktop.backendConfiguration.resolveDaemon"),
+    ),
     resolvePrimary: Effect.gen(function* () {
       const { useWsl, wslRequested } = yield* describePrimary;
       if (useWsl) {

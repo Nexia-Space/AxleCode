@@ -280,7 +280,14 @@ export const layer = Layer.effect(
       // permanently capture DEFAULT_DESKTOP_SETTINGS and mislabel WSL-only
       // primaries as Windows.
       label: configuration.resolvePrimaryLabel,
-      configResolve: configuration.resolvePrimary,
+      configResolve: configuration.resolveDaemon.pipe(
+        Effect.flatMap(
+          Option.match({
+            onNone: () => configuration.resolvePrimary,
+            onSome: (daemonConfig) => Effect.succeed(daemonConfig),
+          }),
+        ),
+      ),
       // Window creation errors propagating out of handleBackendReady must
       // not block the readiness callback (that would prevent restartAttempt
       // from being reset), so we absorb them here. The window service only

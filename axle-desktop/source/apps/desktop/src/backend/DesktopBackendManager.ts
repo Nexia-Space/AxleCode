@@ -87,6 +87,8 @@ export interface DesktopBackendStartConfig {
   readonly httpBaseUrl: URL;
   readonly captureOutput: boolean;
   readonly preflightFailure: Option.Option<PreflightFailure>;
+  /** True when this config attaches to an already-running daemon. */
+  readonly external?: boolean;
   // Present for a WSL run after the configured/default distro has been
   // resolved to the concrete distro passed to wsl.exe.
   readonly runningDistro?: string;
@@ -464,9 +466,11 @@ export const makeBackendInstance = Effect.fn("makeBackendInstance")(function* (
         if (Option.isNone(config)) {
           return;
         }
-        const entryExists = yield* fileSystem
-          .exists(config.value.entryPath)
-          .pipe(Effect.orElseSucceed(() => false));
+        const entryExists = config.value.external
+          ? true
+          : yield* fileSystem
+              .exists(config.value.entryPath)
+              .pipe(Effect.orElseSucceed(() => false));
 
         const resetFatalPreflightCounter =
           !current.desiredRunning && current.preflightFailureAttempt > 0;
@@ -628,7 +632,45 @@ export const makeBackendInstance = Effect.fn("makeBackendInstance")(function* (
           );
         });
 
-        const program = runBackendProcess({
+        const markReady = Effect.fn("desktop.backendInstance.onReady")(function* () {
+          const isCurrentRun = yield* Ref.modify(state, (latest) => {
+            const activeRun = Option.getOrUndefined(latest.active);
+            if (activeRun?.id !== runId) {
+              return [false, latest] as const;
+            }
+
+            return [
+              true,
+              {
+                ...latest,
+                restartAttempt: 0,
+                ready: true,
+              },
+            ] as const;
+          });
+          if (isCurrentRun) {
+            yield* spec.onReady?.(config.value.httpBaseUrl) ?? Effect.void;
+          }
+        });
+
+        const externalProgram: Effect.Effect<void, never, never> = waitForHttpReady(
+          config.value.httpBaseUrl,
+          DEFAULT_BACKEND_READINESS_TIMEOUT,
+        ).pipe(
+          Effect.tapError((error) =>
+            logInstanceWarning("daemon readiness check failed", { error: error.message }),
+          ),
+          Effect.andThen(markReady),
+          // Keep monitoring the attached process. The daemon owns the process,
+          // so a failed health probe should detach and let the normal restart
+          // path rediscover it rather than spawning a duplicate backend.
+          Effect.repeat({ schedule: Schedule.spaced(Duration.seconds(5)) }),
+          Effect.catch((error) => finalizeRun(error.message)),
+          Effect.provideService(HttpClient.HttpClient, httpClient),
+          Effect.ensuring(Scope.close(runScope, Exit.void).pipe(Effect.ignore)),
+        );
+
+        const childProgram = runBackendProcess({
           ...config.value,
           onStarted: Effect.fn("desktop.backendInstance.onStarted")(function* (pid) {
             yield* updateActiveRun(runId, (run) => ({
@@ -640,28 +682,7 @@ export const makeBackendInstance = Effect.fn("makeBackendInstance")(function* (
               details: `pid=${pid} port=${config.value.bootstrap.port} cwd=${config.value.cwd}`,
             });
           }),
-          onReady: Effect.fn("desktop.backendInstance.onReady")(function* () {
-            const isCurrentRun = yield* Ref.modify(state, (latest) => {
-              const activeRun = Option.getOrUndefined(latest.active);
-              if (activeRun?.id !== runId) {
-                return [false, latest] as const;
-              }
-
-              return [
-                true,
-                {
-                  ...latest,
-                  restartAttempt: 0,
-                  ready: true,
-                },
-              ] as const;
-            });
-            if (!isCurrentRun) {
-              return;
-            }
-
-            yield* spec.onReady?.(config.value.httpBaseUrl) ?? Effect.void;
-          }),
+          onReady: markReady,
           onReadinessFailure: (error) =>
             logInstanceWarning("backend readiness check failed during bootstrap", {
               error: error.message,
@@ -677,6 +698,8 @@ export const makeBackendInstance = Effect.fn("makeBackendInstance")(function* (
           }),
           Effect.ensuring(Scope.close(runScope, Exit.void).pipe(Effect.ignore)),
         );
+
+        const program = config.value.external ? externalProgram : childProgram;
 
         const fiber = yield* Effect.forkIn(program, parentScope);
         yield* updateActiveRun(runId, (run) => ({
