@@ -174,7 +174,7 @@ export function PluginAuthorizationCardHost() {
   if (!plugin && cancelledPlugin) {
     return (
       <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[120] flex justify-center px-4">
-        <section className="pointer-events-auto w-full max-w-[430px] rounded-2xl border border-black/10 bg-white/66 p-3 text-neutral-950 shadow-[0_20px_64px_rgba(0,0,0,0.16)] backdrop-blur-3xl dark:border-white/12 dark:bg-neutral-950/58 dark:text-neutral-50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+        <section className="pointer-events-auto w-full max-w-[430px] rounded-2xl border border-black/10 bg-white/66 p-3 text-neutral-950 shadow-[0_20px_64px_rgba(0,0,0,0.16)] backdrop-blur-3xl dark:border-white/12 dark:bg-[#202020]/95 dark:text-neutral-50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
           <div className="flex items-center gap-3">
             <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-black/8 bg-white/55 dark:border-white/10 dark:bg-white/[0.055]">
               <PluginLogo pluginId={cancelledPlugin.id} className="size-5" />
@@ -211,7 +211,7 @@ export function PluginAuthorizationCardHost() {
     <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[120] flex justify-center px-4">
       <section
         aria-label={`${plugin.name} authorization requested`}
-        className="pointer-events-auto w-full max-w-[430px] overflow-hidden rounded-2xl border border-black/10 bg-white/68 text-neutral-950 shadow-[0_22px_70px_rgba(0,0,0,0.18)] backdrop-blur-3xl dark:border-white/12 dark:bg-neutral-950/60 dark:text-neutral-50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+        className="pointer-events-auto w-full max-w-[430px] overflow-hidden rounded-2xl border border-black/10 bg-white/68 text-neutral-950 shadow-[0_22px_70px_rgba(0,0,0,0.18)] backdrop-blur-3xl dark:border-white/12 dark:bg-[#202020]/95 dark:text-neutral-50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
       >
         <div className="flex items-start gap-3 px-4 pb-3 pt-4">
           <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-black/8 bg-white/55 dark:border-white/10 dark:bg-white/[0.055]">

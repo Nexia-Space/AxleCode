@@ -274,6 +274,14 @@ import { RightPanelSheet } from "./RightPanelSheet";
 import { previewEnvironment } from "../state/preview";
 import { useAtomCommand } from "../state/use-atom-command";
 import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPopup,
+  DialogTitle,
+} from "./ui/dialog";
 import { useAssetUrls } from "../assets/assetUrls";
 
 const IMAGE_ONLY_BOOTSTRAP_PROMPT =
@@ -1443,6 +1451,14 @@ function ChatViewContent(props: ChatViewProps) {
     ),
   );
   const visibleThreadError = hasInlineRuntimeError ? null : threadError;
+  const providerLimitError =
+    threadError && /quota|usage limit|rate limit|too many requests|429/iu.test(threadError)
+      ? threadError
+      : null;
+  const [providerLimitDialogOpen, setProviderLimitDialogOpen] = useState(false);
+  useEffect(() => {
+    if (providerLimitError !== null) setProviderLimitDialogOpen(true);
+  }, [providerLimitError]);
   const runtimeMode = composerRuntimeMode ?? activeThread?.runtimeMode ?? DEFAULT_RUNTIME_MODE;
   const interactionMode =
     composerInteractionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
@@ -5598,6 +5614,29 @@ function ChatViewContent(props: ChatViewProps) {
 
         {/* Error banner */}
         <ProviderStatusBanner status={activeProviderStatus} />
+        <Dialog open={providerLimitDialogOpen} onOpenChange={setProviderLimitDialogOpen}>
+          <DialogPopup className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Provider usage limit reached</DialogTitle>
+              <DialogDescription>
+                The connected provider rejected the request. You can wait for the limit to reset,
+                switch models, or connect another provider.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mx-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm leading-6 text-destructive">
+              {providerLimitError}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setProviderLimitDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogPopup>
+        </Dialog>
         <ProviderConnectionDialog
           open={
             providerConnectionDialogOpen ||

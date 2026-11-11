@@ -16,7 +16,7 @@ function ThemePreview({ dark }: { dark: boolean }) {
     <span
       className={cn(
         "absolute inset-0 grid grid-cols-[24%_1fr] overflow-hidden rounded-[3px]",
-        dark ? "bg-[#1a1a1a]" : "bg-[#faf9f6]",
+        dark ? "bg-[#181818]" : "bg-[#faf9f6]",
       )}
     >
       <span

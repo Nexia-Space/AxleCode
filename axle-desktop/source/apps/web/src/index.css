@@ -469,20 +469,20 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 
   @variant dark {
     color-scheme: dark;
-    --background: #0d0d0f;
-    --app-chrome-background: #09090b;
+    --background: #181818;
+    --app-chrome-background: #181818;
     --foreground: #ececec;
-    --card: #151519;
-    --composer-background: #18181c;
-    --composer-context-background: #111115;
+    --card: #202020;
+    --composer-background: #202020;
+    --composer-context-background: #1d1d1d;
     --composer-focus-border: #686875;
     --composer-shadow: 0 12px 32px rgb(0 0 0 / 34%);
     --floating-shadow: 0 14px 44px rgb(0 0 0 / 32%);
     --card-foreground: var(--foreground);
-    --popover: #17171b;
+    --popover: #202020;
     --popover-foreground: var(--foreground);
     --primary: #ececec;
-    --primary-foreground: #1a1a1a;
+    --primary-foreground: #181818;
     --secondary: --alpha(var(--color-white) / 4%);
     --secondary-foreground: var(--color-neutral-100);
     --muted: --alpha(var(--color-white) / 4%);
@@ -491,7 +491,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --accent-foreground: var(--color-neutral-100);
     --destructive: #ed7777;
     --border: #25252b;
-    --input: #303038;
+    --input: #2a2a2a;
     --ring: #b5b5b5;
     --destructive-foreground: #f08a8a;
     --info: #7c9ec9;
@@ -500,7 +500,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --success-foreground: #8fc7a3;
     --warning: #d6a05c;
     --warning-foreground: #e3b476;
-    --sidebar: #0d0d0f;
+    --sidebar: #181818;
     --sidebar-foreground: var(--foreground);
     --sidebar-accent: #2b2b2b;
     --sidebar-accent-foreground: var(--color-neutral-100);
