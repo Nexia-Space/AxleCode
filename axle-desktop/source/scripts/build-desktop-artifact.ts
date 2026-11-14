@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import * as NodeFSP from "node:fs/promises";
+import * as NodePath from "node:path";
 import { fromYaml } from "@axle/shared/schemaYaml";
 import { HostProcessPlatform } from "@axle/shared/hostProcess";
 import { resolveSpawnCommand } from "@axle/shared/shell";
@@ -70,6 +72,30 @@ const decodeNodePtyManifest = Schema.decodeUnknownEffect(
   Schema.fromJsonString(Schema.Struct({ version: Schema.String })),
 );
 const encodeStageWorkspaceConfig = Schema.encodeEffect(fromYaml(StageWorkspaceConfig));
+
+/**
+ * Windows cannot package the Unix symlinks shipped with the Linux llama.cpp
+ * runtime. The Windows installer includes that runtime for WSL, so replace
+ * those links in the staging directory with copies of their targets before
+ * electron-builder reads the resources. The source tree stays symlink-based
+ * for native Linux builds.
+ */
+async function materializeLinuxRuntimeSymlinks(root: string): Promise<void> {
+  const entries = await NodeFSP.readdir(root, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = NodePath.join(root, entry.name);
+    if (entry.isDirectory()) {
+      await materializeLinuxRuntimeSymlinks(entryPath);
+      continue;
+    }
+    if (!entry.isSymbolicLink()) continue;
+
+    const target = await NodeFSP.readlink(entryPath);
+    const targetPath = NodePath.resolve(root, target);
+    await NodeFSP.unlink(entryPath);
+    await NodeFSP.copyFile(targetPath, entryPath);
+  }
+}
 
 const readWorkspaceConfig = Effect.fn("readWorkspaceConfig")(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -1782,6 +1808,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* Effect.log("[desktop-artifact] Staging release app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
+  if (options.platform === "win") {
+    const linuxLlamaDir = path.join(stageResourcesDir, "axle", "llama", "linux-x64");
+    if (yield* fs.exists(linuxLlamaDir)) {
+      yield* Effect.promise(() => materializeLinuxRuntimeSymlinks(linuxLlamaDir));
+    }
+  }
   yield* fs.copy(distDirs.serverDist, path.join(stageAppDir, "apps/server/dist"));
   if (options.platform === "win") {
     const axleBinary = path.resolve(repoRoot, "../..", "target", "release", "axle.exe");
