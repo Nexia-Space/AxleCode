@@ -56,7 +56,7 @@ jobs:
 
   build-macos-x64:
     needs: [test-update-feeds, prepare-release]
-    runs-on: macos-14
+    runs-on: macos-13
     defaults:
       run:
         working-directory: axle-desktop/source
@@ -183,9 +183,9 @@ jobs:
 
   build-macos-arm64:
     needs: [test-update-feeds, prepare-release]
-    # macos-latest can resolve to an unavailable hosted ARM pool. The macos-14
-    # runner is available and this job cross-compiles the explicit ARM target.
-    runs-on: macos-14
+    # Build the ARM artifact by cross-compiling on the broadly available Intel
+    # runner; this avoids relying on an unavailable hosted ARM pool.
+    runs-on: macos-13
     defaults:
       run:
         working-directory: axle-desktop/source
