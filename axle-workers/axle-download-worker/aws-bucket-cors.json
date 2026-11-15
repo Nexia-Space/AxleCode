@@ -2,8 +2,8 @@
   "CORSRules": [
     {
       "AllowedOrigins": [
-        "https://axle.llc",
-        "https://www.axle.llc",
+        "https://heyaxle.click",
+        "https://www.heyaxle.click",
         "http://localhost:5173"
       ],
       "AllowedMethods": ["GET", "HEAD", "PUT"],

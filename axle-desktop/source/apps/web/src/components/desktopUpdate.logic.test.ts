@@ -112,7 +112,7 @@ describe("desktop update button state", () => {
       ...baseState,
       status: "available",
       availableVersion: "1.1.0",
-      manualUpdateUrl: "https://axle.llc/download",
+      manualUpdateUrl: "https://heyaxle.click/download",
     };
     expect(resolveDesktopUpdateButtonAction(state)).toBe("manual");
     expect(shouldShowDesktopUpdateButton(state)).toBe(true);
@@ -123,7 +123,7 @@ describe("desktop update button state", () => {
     const state: DesktopUpdateState = {
       ...baseState,
       status: "up-to-date",
-      manualUpdateUrl: "https://axle.llc/download",
+      manualUpdateUrl: "https://heyaxle.click/download",
     };
     expect(resolveDesktopUpdateButtonAction(state)).toBe("manual");
     expect(shouldShowDesktopUpdateButton(state)).toBe(false);

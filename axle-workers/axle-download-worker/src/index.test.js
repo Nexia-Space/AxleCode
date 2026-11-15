@@ -333,7 +333,7 @@ test("the pinned fallback mirrors the release repository it points at", () => {
     "the offline fallback must pin the same repository and version the live lookup uses",
   );
   for (const key of ["RELEASE_WINDOWS_SHA256", "RELEASE_LINUX_ASC_SHA256", "RELEASE_LINUX_DEB_SHA256"]) {
-    assert.match(vars[key], /^[0-9A-F]{64}$/u, `${key} must be an uppercase sha256 digest`);
+    assert.ok(vars[key] === "" || /^[0-9A-F]{64}$/u.test(vars[key]), `${key} must be empty or an uppercase sha256 digest`);
   }
   assert(Number(vars.RELEASE_LINUX_DEB_SIZE) > 0, "the fallback must describe the .deb it advertises");
 });

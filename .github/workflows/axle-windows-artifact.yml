@@ -14,7 +14,7 @@ env:
   AXLE_PLUGIN_WORKER_URL: ${{ vars.AXLE_PLUGIN_WORKER_URL }}
   VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.AXLE_CLERK_PUBLISHABLE_KEY }}
   VITE_AXLE_PLUGIN_WORKER_URL: ${{ vars.AXLE_PLUGIN_WORKER_URL }}
-  AXLE_UPDATE_URL: https://axle.llc/get/updates/windows
+  AXLE_UPDATE_URL: https://axle-download.axle-workers.workers.dev/get/updates/windows
   T3CODE_DESKTOP_SIGNED: 'false'
   NODE_ENV: production
 

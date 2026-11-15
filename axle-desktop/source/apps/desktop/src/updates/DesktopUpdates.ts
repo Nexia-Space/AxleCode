@@ -51,7 +51,7 @@ const AUTO_UPDATE_POLL_INTERVAL = "5 minutes";
  * version exists, but every download/install affordance opens this page
  * instead of driving the updater into a guaranteed failure.
  */
-export const MANUAL_MACOS_UPDATE_URL = "https://axle.llc/download";
+export const MANUAL_MACOS_UPDATE_URL = "https://heyaxle.click/download";
 
 const AppUpdateYmlConfig = Schema.Record(Schema.String, Schema.String);
 type AppUpdateYmlConfig = typeof AppUpdateYmlConfig.Type;

@@ -10,7 +10,7 @@
     "name": "Axle",
     "email": "support@axle.llc"
   },
-  "homepage": "https://axle.llc",
+  "homepage": "https://heyaxle.click",
   "main": "apps/desktop/dist-electron/main.cjs",
   "dependencies": {
     "@effect/platform-bun": "4.0.0-beta.78",

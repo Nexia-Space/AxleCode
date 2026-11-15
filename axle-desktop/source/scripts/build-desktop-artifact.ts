@@ -1923,7 +1923,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       name: "Axle",
       email: "support@axle.llc",
     },
-    homepage: "https://axle.llc",
+    homepage: "https://heyaxle.click",
     main: "apps/desktop/dist-electron/main.cjs",
     build: yield* createBuildConfig(
       options.platform,

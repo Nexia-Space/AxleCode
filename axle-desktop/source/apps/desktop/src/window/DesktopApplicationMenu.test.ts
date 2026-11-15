@@ -177,7 +177,7 @@ describe("DesktopApplicationMenu", () => {
       const openedExternalUrl = yield* Deferred.make<string>();
       const manualState: DesktopUpdateState = {
         ...desktopUpdateState,
-        manualUpdateUrl: "https://axle.llc/download",
+        manualUpdateUrl: "https://heyaxle.click/download",
       };
 
       yield* Effect.gen(function* () {
@@ -215,7 +215,7 @@ describe("DesktopApplicationMenu", () => {
       }
 
       checkClick({} as Electron.MenuItem, {} as Electron.BrowserWindow, {} as KeyboardEvent);
-      assert.equal(yield* Deferred.await(openedExternalUrl), "https://axle.llc/download");
+      assert.equal(yield* Deferred.await(openedExternalUrl), "https://heyaxle.click/download");
     }),
   );
 });

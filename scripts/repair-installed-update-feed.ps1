@@ -14,9 +14,9 @@ if (-not (Test-Path -LiteralPath $resourcesPath -PathType Container)) {
 }
 
 $feedPath = switch ($Platform) {
-  'windows' { 'https://axle.llc/get/updates/windows' }
-  'macos-arm64' { 'https://axle.llc/get/updates/macos/arm64' }
-  'macos-x64' { 'https://axle.llc/get/updates/macos/x64' }
+  'windows' { 'https://axle-download.axle-workers.workers.dev/get/updates/windows' }
+  'macos-arm64' { 'https://axle-download.axle-workers.workers.dev/get/updates/macos/arm64' }
+  'macos-x64' { 'https://axle-download.axle-workers.workers.dev/get/updates/macos/x64' }
 }
 
 $targetPath = Join-Path $resourcesPath 'app-update.yml'
