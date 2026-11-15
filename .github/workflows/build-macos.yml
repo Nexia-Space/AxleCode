@@ -56,7 +56,7 @@ jobs:
 
   build-macos-x64:
     needs: [test-update-feeds, prepare-release]
-    runs-on: macos-13
+    runs-on: macos-15-intel
     defaults:
       run:
         working-directory: axle-desktop/source
@@ -183,9 +183,8 @@ jobs:
 
   build-macos-arm64:
     needs: [test-update-feeds, prepare-release]
-    # Build the ARM artifact by cross-compiling on the broadly available Intel
-    # runner; this avoids relying on an unavailable hosted ARM pool.
-    runs-on: macos-13
+    # Build the ARM artifact on the supported Apple Silicon runner.
+    runs-on: macos-15
     defaults:
       run:
         working-directory: axle-desktop/source
