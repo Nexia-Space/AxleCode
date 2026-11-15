@@ -172,10 +172,11 @@ def render_knockout(size: int, *, radius_frac: float = 10 / 128, supersample: in
 
 
 def render_favicon_tile(size: int, *, supersample: int = 4) -> Image.Image:
-    """Render the public favicon.svg artwork as a raster app icon."""
+    """Render a solid black tile with the white Axle mark."""
     big = size * supersample
     tile = Image.new("RGBA", (big, big), (0, 0, 0, 255))
-    tile.alpha_composite(render(big, frac=0.60, color=WHITE, supersample=1))
+    mark = render(big, frac=0.60, color=WHITE, supersample=1)
+    tile = Image.composite(Image.new("RGBA", (big, big), WHITE), tile, mark.getchannel("A"))
     return tile.resize((size, size), Image.LANCZOS)
 
 
@@ -288,18 +289,20 @@ def main() -> None:
     desktop_assets = ROOT / "apps" / "desktop" / "assets"
 
     icon_1024 = render(1024)
+    desktop_icon = render_favicon_tile(1024)
     write_png(prod / "axle-logo-source.png", render(1254, frac=0.5455))
-    for name in ("axle-ios-1024.png", "axle-macos-1024.png", "axle-universal-1024.png"):
-        write_png(prod / name, icon_1024)
+    write_png(prod / "axle-ios-1024.png", icon_1024)
+    for name in ("axle-macos-1024.png", "axle-universal-1024.png"):
+        write_png(prod / name, desktop_icon)
     for name in ("black-ios-1024.png", "black-macos-1024.png", "black-universal-1024.png"):
         write_png(prod / name, icon_1024)
     apple_touch_180 = render(180)
     write_png(prod / "axle-web-apple-touch-180.png", apple_touch_180)
     write_png(prod / "axle-web-favicon-16x16.png", render(16, supersample=8))
     write_png(prod / "axle-web-favicon-32x32.png", render(32, supersample=8))
-    write_ico(prod / "axle-windows.ico")
+    write_ico(prod / "axle-windows.ico", renderer=render_favicon_tile)
     write_ico(prod / "axle-web-favicon.ico")
-    write_icns(prod / "axle-macos.icns")
+    write_icns(prod / "axle-macos.icns", renderer=render_favicon_tile)
 
     write_png(prod / "t3-black-web-apple-touch-180.png", render_knockout(180))
     write_png(prod / "t3-black-web-favicon-16x16.png", render_knockout(16, supersample=8))
@@ -353,7 +356,6 @@ def main() -> None:
     write_webp(marketing / "apple-touch-icon.webp", render(180))
     write_ico(marketing / "favicon.ico")
 
-    desktop_icon = render_favicon_tile(1024)
     write_png(desktop_resources / "icon.png", desktop_icon)
     write_ico(desktop_resources / "icon.ico", renderer=render_favicon_tile)
     write_icns(desktop_resources / "icon.icns", renderer=render_favicon_tile)
