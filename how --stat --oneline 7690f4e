@@ -1,0 +1,10 @@
+[33m7690f4e[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat(analytics): Next.js dashboard reading Mongo, GitHub, Bachs
+[33m9bcedfb[m Run auth security checks on dependency changes
+[33m6520a60[m Regenerate pnpm lockfile after merge
+[33m0e42a2c[m Merge origin/main into main, preserving local Codex and offline features
+[33m3f4cb02[m omo
+[33mf981e18[m[33m ([m[1;33mtag: v1.1.38[m[33m)[m Open source release: MIT license, GitHub workflows, auth simplification,
+[33mc38c279[m Merge pull request #1 from thatcreativetayo/design-changes
+[33mfaaeb21[m[33m ([m[1;33mtag: v1.1.37[m[33m)[m chore(release): bump packages to v1.1.37
+[33m04c23ac[m feat(auth): require account sign-in on desktop launch
+[33m324c906[m feat(landing): add BetterUmami analytics
