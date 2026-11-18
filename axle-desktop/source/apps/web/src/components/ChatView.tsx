@@ -4268,9 +4268,20 @@ function ChatViewContent(props: ChatViewProps) {
   ]);
 
   const onRevertToTurnCount = useCallback(
-    async (turnCount: number) => {
+    async (turnCount: number, restorePrompt?: string) => {
       const localApi = readLocalApi();
-      if (!workspaceContextEnabled || !localApi || !activeThread || isRevertingCheckpoint) return;
+      // Each of these used to return silently, so a revert that could never
+      // run looked identical to one that did nothing.
+      if (!activeThread) return;
+      if (isRevertingCheckpoint) return;
+      if (!workspaceContextEnabled) {
+        setThreadError(activeThread.id, "Reverting is only available in a project thread.");
+        return;
+      }
+      if (!localApi) {
+        setThreadError(activeThread.id, "Reverting is only available in the Axle desktop app.");
+        return;
+      }
 
       if (activeEnvironmentUnavailable && activeEnvironmentUnavailableLabel) {
         setThreadError(
@@ -4296,32 +4307,46 @@ function ChatViewContent(props: ChatViewProps) {
 
       setIsRevertingCheckpoint(true);
       setThreadError(activeThread.id, null);
-      const result = await revertThreadCheckpoint({
-        environmentId,
-        input: {
-          threadId: activeThread.id,
-          turnCount,
-        },
-      });
-      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-        const error = squashAtomCommandFailure(result);
-        setThreadError(
-          activeThread.id,
-          error instanceof Error ? error.message : "Failed to revert thread state.",
-        );
+      try {
+        const result = await revertThreadCheckpoint({
+          environmentId,
+          input: {
+            threadId: activeThread.id,
+            turnCount,
+          },
+        });
+        if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+          const error = squashAtomCommandFailure(result);
+          setThreadError(
+            activeThread.id,
+            error instanceof Error ? error.message : "Failed to revert thread state.",
+          );
+          return;
+        }
+        // The reverted message is gone from the thread, so hand its text back
+        // to the composer instead of making people retype it.
+        if (restorePrompt !== undefined && restorePrompt.length > 0) {
+          promptRef.current = restorePrompt;
+          setComposerDraftPrompt(composerDraftTarget, restorePrompt);
+        }
+      } finally {
+        // Without this a thrown command leaves the flag set, which disables
+        // the revert button for the rest of the session.
+        setIsRevertingCheckpoint(false);
       }
-      setIsRevertingCheckpoint(false);
     },
     [
       activeThread,
       activeEnvironmentUnavailable,
       activeEnvironmentUnavailableLabel,
+      composerDraftTarget,
       environmentId,
       isConnecting,
       isRevertingCheckpoint,
       isSendBusy,
       phase,
       revertThreadCheckpoint,
+      setComposerDraftPrompt,
       setThreadError,
       workspaceContextEnabled,
     ],
@@ -5436,6 +5461,8 @@ function ChatViewContent(props: ChatViewProps) {
   revertTurnCountRef.current = revertTurnCountByUserMessageId;
   const onRevertToTurnCountRef = useRef(onRevertToTurnCount);
   onRevertToTurnCountRef.current = onRevertToTurnCount;
+  const messagesRef = useRef(activeThread?.messages);
+  messagesRef.current = activeThread?.messages;
   const onRevertUserMessage = useCallback(
     (messageId: MessageId) => {
       if (isUnscopedChatThread) {
@@ -5445,7 +5472,8 @@ function ChatViewContent(props: ChatViewProps) {
       if (typeof targetTurnCount !== "number") {
         return;
       }
-      void onRevertToTurnCountRef.current(targetTurnCount);
+      const reverted = messagesRef.current?.find((message) => message.id === messageId);
+      void onRevertToTurnCountRef.current(targetTurnCount, reverted?.text ?? "");
     },
     [isUnscopedChatThread],
   );
