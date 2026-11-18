@@ -35,6 +35,12 @@ MARK_PATHS = (
 ICON_COLOR = (0, 0, 0, 255)
 WHITE = (255, 255, 255, 255)
 
+# The downloadable app icon and favicon.svg are the same artwork: a rounded
+# black tile with the white mark. Both emitters read these two numbers so the
+# raster installers can never drift from the vector.
+TILE_RADIUS_FRAC = 10 / 128
+TILE_BOX_FRAC = 0.60
+
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 ICNS_RENDITIONS = (
     ("ic07", 128),
@@ -172,10 +178,16 @@ def render_knockout(size: int, *, radius_frac: float = 10 / 128, supersample: in
 
 
 def render_favicon_tile(size: int, *, supersample: int = 4) -> Image.Image:
-    """Render a solid black tile with the white Axle mark."""
+    """Render the rounded black tile with the white Axle mark, matching favicon.svg."""
+    # The corners need antialiasing even for the icns renditions, which ask for
+    # supersample=1 because a flat square had nothing to smooth.
+    supersample = max(supersample, 4)
     big = size * supersample
-    tile = Image.new("RGBA", (big, big), (0, 0, 0, 255))
-    mark = render(big, frac=0.60, color=WHITE, supersample=1)
+    tile = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).rounded_rectangle(
+        (0, 0, big - 1, big - 1), radius=int(round(TILE_RADIUS_FRAC * big)), fill=(0, 0, 0, 255)
+    )
+    mark = render(big, frac=TILE_BOX_FRAC, color=WHITE, supersample=1)
     tile = Image.composite(Image.new("RGBA", (big, big), WHITE), tile, mark.getchannel("A"))
     return tile.resize((size, size), Image.LANCZOS)
 
@@ -363,7 +375,11 @@ def main() -> None:
     write_ico(desktop_assets / "icon.ico", renderer=render_favicon_tile)
 
     favicon_document = tile_svg_document(
-        size=128, radius=10, background="#000000", fill="#ffffff", box_frac=0.60
+        size=128,
+        radius=TILE_RADIUS_FRAC * 128,
+        background="#000000",
+        fill="#ffffff",
+        box_frac=TILE_BOX_FRAC,
     )
     write_text(ROOT / "favicon.svg", favicon_document)
     write_text(web_public / "favicon.svg", favicon_document)
