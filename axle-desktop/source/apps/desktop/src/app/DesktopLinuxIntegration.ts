@@ -18,6 +18,22 @@ const { logInfo, logWarning } = makeComponentLogger("desktop-linux-integration")
 const LEGACY_ENTRY_BASE_NAMES = ["t3code"] as const;
 
 /**
+ * The entry keys this function owns. Everything else in the file belongs to
+ * whoever put it there, and only these are compared to decide whether the
+ * entry needs rewriting.
+ */
+const MANAGED_ENTRY_KEYS = ["Name", "Exec", "TryExec", "Icon", "StartupWMClass"] as const;
+
+function readEntryValues(entry: string): ReadonlyMap<string, string> {
+  const values = new Map<string, string>();
+  for (const line of entry.split("\n")) {
+    const separator = line.indexOf("=");
+    if (separator > 0) values.set(line.slice(0, separator), line.slice(separator + 1));
+  }
+  return values;
+}
+
+/**
  * Build the entry from the one the AppImage ships, so fields we do not manage
  * (MimeType, Categories, protocol handlers) stay whatever the build declared.
  */
@@ -170,9 +186,16 @@ const refresh = Effect.fn("desktop.linuxIntegration.refresh")(function* () {
     wmClass: environment.linuxWmClass,
     iconName: entryBaseName,
   });
-  const entryChanged = (yield* fs.exists(entryPath))
-    ? (yield* fs.readFileString(entryPath)) !== desktopEntry
-    : true;
+  // Compare only the keys we own. Requiring the whole file to match our
+  // rendering meant anything else adding a key - a desktop environment, an
+  // installer, a `text/html` MimeType from an older build - made this rewrite
+  // the entry and re-run the icon caches on every single launch.
+  const existingEntry = (yield* fs.exists(entryPath)) ? yield* fs.readFileString(entryPath) : null;
+  const existingValues = existingEntry === null ? null : readEntryValues(existingEntry);
+  const desiredValues = readEntryValues(desktopEntry);
+  const entryChanged =
+    existingValues === null ||
+    MANAGED_ENTRY_KEYS.some((key) => existingValues.get(key) !== desiredValues.get(key));
   if (entryChanged) {
     yield* fs.makeDirectory(applicationsDir, { recursive: true });
     yield* fs.writeFileString(entryPath, desktopEntry);
