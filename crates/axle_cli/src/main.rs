@@ -1055,9 +1055,11 @@ async fn run_persistent_json_stream(
             Ok(response) => write_result(cli, &response, session.session_id()),
             Err(error) => {
                 tracing::error!("Persistent Axle turn failed: {error:#}");
+                // Desktop users have no access to the server log, so the
+                // provider's own explanation has to travel with the event.
                 write_json_line(serde_json::json!({
                     "type": "error",
-                    "message": "Axle could not complete this turn. Check the server logs for details.",
+                    "message": format!("{error:#}"),
                     "sessionId": session.session_id(),
                 }));
             }

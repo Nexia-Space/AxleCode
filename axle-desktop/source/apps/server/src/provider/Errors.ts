@@ -187,6 +187,23 @@ export class ProviderSessionDirectoryPersistenceError extends Schema.TaggedError
   }
 }
 
+/**
+ * The text a person should read for a provider failure.
+ *
+ * Every error class above prefixes its `message` with the internal envelope
+ * ("Provider adapter process error (axle) for thread standalone: ...") so logs
+ * can be traced back to a layer. That prefix is noise in the chat timeline,
+ * where the only useful part is the cause the adapter already formatted.
+ */
+export function providerErrorDetail(error: unknown): string {
+  if (error !== null && typeof error === "object" && "detail" in error) {
+    const { detail } = error as { readonly detail: unknown };
+    if (typeof detail === "string" && detail.trim().length > 0) return detail;
+  }
+  if (error instanceof Error && error.message.trim().length > 0) return error.message;
+  return "";
+}
+
 export type ProviderAdapterError =
   | ProviderAdapterValidationError
   | ProviderAdapterSessionNotFoundError

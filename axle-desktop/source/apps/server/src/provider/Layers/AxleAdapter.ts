@@ -46,6 +46,7 @@ import {
   ProviderAdapterRequestError,
   ProviderAdapterSessionNotFoundError,
   ProviderAdapterValidationError,
+  providerErrorDetail,
   type ProviderAdapterError,
 } from "../Errors.ts";
 import * as McpProviderSession from "../../mcp/McpProviderSession.ts";
@@ -164,6 +165,27 @@ function sanitizeAxleLogDetail(value: string): string {
       "$1<redacted>",
     )
     .slice(0, 1_000);
+}
+
+/**
+ * Describe how the Axle child ended when it left nothing on stderr.
+ *
+ * A null exit code means a signal killed the process, which used to surface as
+ * "exit code unknown" - true, but it sent people looking for an exit code that
+ * never existed instead of for the thing that killed the run.
+ */
+export function describeAxleExit(code: number | null, signal: NodeJS.Signals | null): string {
+  if (signal !== null) {
+    const cause =
+      signal === "SIGKILL" || signal === "SIGTERM"
+        ? " It was most likely stopped by the app, a timeout, or the operating system running low on memory."
+        : "";
+    return `Axle was terminated by ${signal} before it returned a result.${cause}`;
+  }
+  if (code !== null) {
+    return `Axle exited with code ${code} before returning a result, and reported no error. Check the provider connection in Settings > Models, then try again.`;
+  }
+  return "Axle ended before returning a result and reported no error. Check the provider connection in Settings > Models, then try again.";
 }
 
 export function formatAxleProcessError(
@@ -1152,6 +1174,14 @@ function runAxle(input: {
               rejectOnce(cause);
             }
           },
+          // An error frame is terminal for the turn, exactly as it is for the
+          // persistent stream. Without this the turn waits for a result that
+          // is never coming and reports however the child happened to exit,
+          // throwing away the message the runtime just explained itself with.
+          onError: (message) => {
+            input.callbacks?.onError?.(message);
+            rejectOnce(new Error(message));
+          },
         });
         const armTimeout = () => {
           if (settled) return;
@@ -1193,20 +1223,13 @@ function runAxle(input: {
           decoder.failOpenWork(`Axle process error: ${err.message}`);
           rejectOnce(err);
         });
-        child.once("close", (code) => {
+        child.once("close", (code, signal) => {
           if (settled) return;
           cleanup();
           if (code !== 0) {
-            decoder.failOpenWork(
-              stderr.trim() ||
-                `Axle exited before returning a result (exit code ${code ?? "unknown"}).`,
-            );
-            rejectOnce(
-              new Error(
-                stderr.trim() ||
-                  `Axle exited before returning a result (exit code ${code ?? "unknown"}).`,
-              ),
-            );
+            const detail = stderr.trim() || describeAxleExit(code, signal);
+            decoder.failOpenWork(detail);
+            rejectOnce(new Error(detail));
             return;
           }
           try {
@@ -1400,14 +1423,13 @@ function runPersistentAxle(input: {
             activeTurn.fail?.(error);
             destroyProcess();
           });
-          child.once("close", (code) => {
+          child.once("close", (code, signal) => {
             if (input.processes.get(input.processKey) === currentProcess) {
               input.processes.delete(input.processKey);
             }
             const activeTurn = currentProcess.pending;
             if (!activeTurn) return;
-            const detail =
-              currentProcess.stderr.trim() || `Axle exited (exit code ${code ?? "unknown"}).`;
+            const detail = currentProcess.stderr.trim() || describeAxleExit(code, signal);
             activeTurn.decoder.failOpenWork(detail);
             activeTurn.fail?.(new Error(detail));
           });
@@ -1953,7 +1975,9 @@ export const makeAxleAdapter = (options: AxleAdapterOptions) =>
         Effect.catch((error) =>
           Effect.gen(function* () {
             if (isTurnCancelled()) return;
-            const errorMessage = error?.message ?? "";
+            // The timeline shows this verbatim, so use the formatted cause
+            // rather than the tagged error's layer-prefixed message.
+            const errorMessage = providerErrorDetail(error) || "Axle turn failed.";
             const isContextLengthError =
               errorMessage.includes("context_length_exceeded") ||
               errorMessage.includes("context length") ||
