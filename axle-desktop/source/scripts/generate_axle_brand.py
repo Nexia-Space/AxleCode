@@ -304,6 +304,10 @@ def main() -> None:
     desktop_icon = render_favicon_tile(1024)
     write_png(prod / "axle-logo-source.png", render(1254, frac=0.5455))
     write_png(prod / "axle-ios-1024.png", icon_1024)
+    # The in-app logo (apps/web AxleLogo) paints currentColor through this
+    # file's alpha, so it must stay the bare mark on transparency. It is kept
+    # separate from the icon exports because those are free to become tiles.
+    write_png(prod / "axle-mark-mono-1024.png", icon_1024)
     for name in ("axle-macos-1024.png", "axle-universal-1024.png"):
         write_png(prod / name, desktop_icon)
     for name in ("black-ios-1024.png", "black-macos-1024.png", "black-universal-1024.png"):

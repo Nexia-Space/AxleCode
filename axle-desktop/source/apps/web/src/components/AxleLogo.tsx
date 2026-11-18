@@ -1,8 +1,14 @@
 import { useId, type SVGProps } from "react";
 
-import logoUrl from "../../../../assets/prod/axle-universal-1024.png?inline";
+import logoUrl from "../../../../assets/prod/axle-mark-mono-1024.png?inline";
 
-/** Use the approved artwork's alpha, so the mark follows the surrounding text color. */
+/**
+ * Use the approved artwork's alpha, so the mark follows the surrounding text color.
+ *
+ * This only works while the source is the bare mark on transparency. Pointing
+ * it at one of the app-icon exports renders a solid block of `currentColor`,
+ * because those are opaque tiles whose alpha covers the whole canvas.
+ */
 export function AxleLogo(props: SVGProps<SVGSVGElement>) {
   const maskId = `axle-logo-${useId().replaceAll(":", "")}`;
 
