@@ -2,7 +2,12 @@ use reqwest::{Response, StatusCode};
 use std::future::Future;
 use std::time::Duration;
 
-pub const MAX_RETRIES: u32 = 2;
+/// Six retries spend 1 + 2 + 4 + 8 + 16 + 30 = 61 seconds waiting before the
+/// failure is surfaced. Two retries gave up after three seconds, which turned
+/// a brief rate limit or provider blip into a failed turn the user had to
+/// resend by hand. Only transient failures reach this loop, so the longer
+/// window costs nothing on errors that cannot succeed on a retry.
+pub const MAX_RETRIES: u32 = 6;
 const INITIAL_BACKOFF: Duration = Duration::from_secs(1);
 const MAX_BACKOFF: Duration = Duration::from_secs(30);
 
@@ -105,6 +110,15 @@ mod tests {
         assert_eq!(retry_delay(2), Duration::from_secs(4));
         assert_eq!(retry_delay(5), Duration::from_secs(30));
         assert_eq!(retry_delay(31), Duration::from_secs(30));
+    }
+
+    #[test]
+    fn retry_window_spans_at_least_a_minute_before_failing() {
+        let total: Duration = (0..MAX_RETRIES).map(retry_delay).sum();
+        assert!(
+            total >= Duration::from_secs(60),
+            "retries should absorb transient failures for at least a minute, got {total:?}"
+        );
     }
 
     #[tokio::test]
