@@ -6,7 +6,12 @@ import {
 } from "@axle/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { Scheduler, type ScheduleExecutor, type ScheduleStore } from "./Scheduler.ts";
+import {
+  Scheduler,
+  ScheduleTargetUnavailableError,
+  type ScheduleExecutor,
+  type ScheduleStore,
+} from "./Scheduler.ts";
 
 const NOW = Date.parse("2026-10-11T12:00:00.000Z");
 const HOUR = 3_600_000;
@@ -60,6 +65,7 @@ function harness(initial: readonly ServerScheduledTask[] = [task()]) {
   let sequence = 0;
   let rejectWrite: (tasks: readonly ServerScheduledTask[]) => boolean = () => false;
   const busy = new Set<ThreadId>();
+  const unavailable = new Set<ThreadId>();
   const accepted = new Set<string>();
   const attempts: ScheduledTaskRun[] = [];
   const results = new Map<string, { status: ScheduledTaskRun["status"]; error: string | null }>();
@@ -74,7 +80,13 @@ function harness(initial: readonly ServerScheduledTask[] = [task()]) {
   };
   const executor: ScheduleExecutor = {
     validateTarget: async () => undefined,
-    isBusy: async (threadId) => busy.has(threadId),
+    isBusy: async (threadId) => {
+      if (unavailable.has(threadId))
+        throw new ScheduleTargetUnavailableError(
+          "The target chat was deleted or archived. Choose an active chat.",
+        );
+      return busy.has(threadId);
+    },
     dispatch: async (scheduledTask, scheduledRun) => {
       attempts.push(structuredClone(scheduledRun));
       expect(stored.find((entry) => entry.id === scheduledTask.id)?.runs).toContainEqual(
@@ -112,6 +124,7 @@ function harness(initial: readonly ServerScheduledTask[] = [task()]) {
       return scheduler;
     },
     busy,
+    unavailable,
     accepted,
     attempts,
     results,
@@ -193,6 +206,27 @@ describe("Scheduler execution", () => {
     expect(state.accepted.size).toBe(1);
     expect(state.stored()[0]).toMatchObject({ nextRunAt: "2026-10-11T18:00:00.000Z" });
     expect(state.stored()[0]?.runs[0]?.scheduledAt).toBe("2026-10-11T10:00:00.000Z");
+  });
+
+  it("retires a task whose target chat is gone instead of retrying it forever", async () => {
+    const state = harness([task({ nextRunAt: "2026-10-11T10:00:00.000Z" })]);
+    state.unavailable.add(ThreadId.make("thread-a"));
+    await state.scheduler.initialize();
+
+    // The tick must not surface this as a failure: it is handled, not deferred.
+    await state.scheduler.tick();
+    expect(state.stored()[0]).toMatchObject({ active: false, nextRunAt: null });
+    expect(state.stored()[0]?.runs[0]).toMatchObject({
+      status: "failed",
+      error: expect.stringContaining("turned off"),
+    });
+
+    // Later ticks leave the retired task alone rather than rewriting it.
+    const afterFirst = structuredClone(state.stored());
+    await state.scheduler.tick();
+    await state.scheduler.tick();
+    expect(state.stored()).toEqual(afterFirst);
+    expect(state.accepted.size).toBe(0);
   });
 
   it("disables one-off tasks after claiming their occurrence", async () => {

@@ -13,6 +13,20 @@ export interface ScheduleStore {
   write(tasks: readonly ServerScheduledTask[]): Promise<void>;
 }
 
+/**
+ * The task's target chat is gone for good - deleted or archived.
+ *
+ * Distinct from an ordinary executor failure because it can never resolve on
+ * its own: retrying is guaranteed to fail again. The tick loop deactivates the
+ * task instead of retrying it every five seconds forever.
+ */
+export class ScheduleTargetUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ScheduleTargetUnavailableError";
+  }
+}
+
 export interface ScheduleExecutor {
   validateTarget(threadId: ThreadId): Promise<void>;
   isBusy(threadId: ThreadId): Promise<boolean>;
@@ -151,6 +165,36 @@ export class Scheduler {
     });
   }
 
+  /**
+   * Retire a task whose target chat no longer exists, recording the reason as
+   * a failed run so the chat's history explains why it stopped. Idempotent: an
+   * already-inactive task is left alone rather than rewritten on every tick.
+   */
+  private async deactivateUnavailable(id: string, reason: string): Promise<void> {
+    const task = this.tasks.find((entry) => entry.id === id);
+    if (!task || !task.active) return;
+    const timestamp = new Date(this.now()).toISOString();
+    await this.replace({
+      ...task,
+      active: false,
+      nextRunAt: null,
+      updatedAt: timestamp,
+      runs: retainRuns([
+        {
+          id: this.createId(),
+          threadId: task.threadId,
+          scheduledAt: task.nextRunAt ?? timestamp,
+          startedAt: timestamp,
+          completedAt: timestamp,
+          status: "failed",
+          error: `${reason} This task was turned off.`,
+          manual: false,
+        },
+        ...task.runs,
+      ]),
+    });
+  }
+
   private async updateRun(
     task: ServerScheduledTask,
     run: ScheduledTaskRun,
@@ -238,6 +282,13 @@ export class Scheduler {
           if (task.active && task.nextRunAt !== null && Date.parse(task.nextRunAt) <= this.now())
             await this.start(task, false);
         } catch (error) {
+          // A target that is gone for good cannot be retried into existence.
+          // Leaving the task active spins this loop every five seconds for the
+          // life of the process, so retire it and record why.
+          if (error instanceof ScheduleTargetUnavailableError) {
+            await this.deactivateUnavailable(original.id, message(error));
+            continue;
+          }
           // Keep an unconfirmed run recoverable, but do not let one unavailable
           // target prevent other tasks from being inspected or dispatched.
           failures.push(error);

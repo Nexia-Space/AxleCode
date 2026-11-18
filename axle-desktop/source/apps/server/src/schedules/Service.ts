@@ -17,7 +17,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { OrchestrationEngineService } from "../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
-import { Scheduler, type ScheduleExecutor } from "./Scheduler.ts";
+import { Scheduler, ScheduleTargetUnavailableError, type ScheduleExecutor } from "./Scheduler.ts";
 
 export class ScheduledTasks extends Context.Service<ScheduledTasks, Scheduler>()(
   "axle/schedules/ScheduledTasks",
@@ -49,13 +49,17 @@ export const ScheduledTasksLive = Layer.effect(
         result.value.deletedAt !== null ||
         result.value.archivedAt !== null
       )
-        throw new Error("The target chat was deleted or archived. Choose an active chat.");
+        throw new ScheduleTargetUnavailableError(
+          "The target chat was deleted or archived. Choose an active chat.",
+        );
       return result.value;
     };
     const getShell = async (threadId: ThreadId) => {
       const result = await Effect.runPromise(query.getThreadShellById(threadId));
       if (Option.isNone(result) || result.value.archivedAt !== null)
-        throw new Error("The target chat was deleted or archived. Choose an active chat.");
+        throw new ScheduleTargetUnavailableError(
+          "The target chat was deleted or archived. Choose an active chat.",
+        );
       return result.value;
     };
     const isBusy = async (threadId: ThreadId) => {
