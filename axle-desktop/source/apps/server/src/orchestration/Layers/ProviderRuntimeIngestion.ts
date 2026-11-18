@@ -218,6 +218,15 @@ function truncateDetail(value: string, limit = 180): string {
   return value.length > limit ? `${value.slice(0, limit - 3)}...` : value;
 }
 
+/**
+ * Provider failures need far more room than the 180 characters that suit a
+ * row label. A provider's reply is typically a JSON envelope wrapping the one
+ * sentence worth reading - an Anthropic 401 spends ~130 characters on the
+ * envelope and request id before its `message` field even starts - so the
+ * default limit tends to cut exactly the part that explains the failure.
+ */
+const PROVIDER_ERROR_DETAIL_LIMIT = 2_000;
+
 function normalizeProposedPlanMarkdown(planMarkdown: string | undefined): string | undefined {
   const trimmed = planMarkdown?.trim();
   if (!trimmed) {
@@ -443,7 +452,7 @@ export function runtimeEventToActivities(
           kind: "runtime.error",
           summary: "Runtime error",
           payload: {
-            message: truncateDetail(event.payload.message),
+            message: truncateDetail(event.payload.message, PROVIDER_ERROR_DETAIL_LIMIT),
           },
           turnId: toTurnId(event.turnId) ?? null,
           ...maybeSequence,
