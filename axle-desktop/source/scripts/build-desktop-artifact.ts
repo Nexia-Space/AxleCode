@@ -1534,7 +1534,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   if (platform === "linux") {
     buildConfig.linux = {
       target: [target],
-      executableName: "t3code",
+      executableName: "axle",
       icon: "icons",
       category: "Development",
       // electron-builder turns these into `MimeType=x-scheme-handler/...` in the
@@ -1548,7 +1548,10 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       ],
       desktop: {
         entry: {
-          StartupWMClass: "t3code",
+          // Must match the `--class` switch the app sets at startup
+          // (DesktopEnvironment.linuxWmClass) or the shell cannot tie the
+          // running window back to this launcher entry.
+          StartupWMClass: "axle",
         },
       },
     };
