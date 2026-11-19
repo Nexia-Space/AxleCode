@@ -12,6 +12,12 @@ export const PersistedServerRuntimeState = Schema.Struct({
   version: Schema.Literal(1),
   /** Identifies a long-lived user daemon versus an app-owned child server. */
   role: Schema.optional(Schema.Literals(["daemon", "desktop"])),
+  /**
+   * Build this server came from, so a desktop app can tell whether a daemon
+   * it discovers speaks the same protocol and serves matching client assets.
+   * Optional because a daemon from an older build will not write it.
+   */
+  serverVersion: Schema.optional(Schema.String),
   pid: Schema.Int,
   host: Schema.optional(Schema.String),
   port: Schema.Int,
@@ -50,10 +56,12 @@ export const makePersistedServerRuntimeState = (input: {
   readonly config: Pick<ServerConfig.ServerConfig["Service"], "host">;
   readonly port: number;
   readonly role?: PersistedServerRuntimeState["role"];
+  readonly serverVersion?: string;
 }): Effect.Effect<PersistedServerRuntimeState> =>
   Effect.map(DateTime.now, (now) => ({
     version: 1,
     ...(input.role !== undefined ? { role: input.role } : {}),
+    ...(input.serverVersion !== undefined ? { serverVersion: input.serverVersion } : {}),
     pid: process.pid,
     ...(input.config.host ? { host: input.config.host } : {}),
     port: input.port,

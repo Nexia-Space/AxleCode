@@ -91,6 +91,8 @@ import { DRIVER_OPTIONS, getDriverOption } from "./providerDriverMeta";
 import {
   buildProviderInstanceUpdatePatch,
   formatDiagnosticsDescription,
+  pairableAdvertisedEndpoints,
+  pairingUnavailableReason,
 } from "./SettingsPanels.logic";
 import {
   SettingResetButton,
@@ -1124,6 +1126,15 @@ function RemoteAccessSettingsSection() {
   const snapshot = AsyncResult.getOrElse(networkAccess, () => null);
   const exposure = snapshot?.serverExposureState ?? null;
   const isNetworkAccessible = exposure?.mode === "network-accessible";
+  const advertisedEndpoints = snapshot?.advertisedEndpoints ?? [];
+  const pairableEndpoints = useMemo(
+    () => pairableAdvertisedEndpoints(advertisedEndpoints),
+    [advertisedEndpoints],
+  );
+  const tailscaleEndpoint = useMemo(
+    () => advertisedEndpoints.find((endpoint) => endpoint.provider.id === "tailscale") ?? null,
+    [advertisedEndpoints],
+  );
 
   const handleModeChange = useCallback(
     (nextEnabled: boolean) => {
@@ -1241,9 +1252,15 @@ function RemoteAccessSettingsSection() {
         />
         <SettingsRow
           title="Share over Tailscale"
+          // The toggle only records intent. Report the endpoint the provider
+          // actually resolved, so a missing Tailscale install or unconfigured
+          // Serve reads as unavailable instead of as a working address.
           description={
             exposure?.tailscaleServeEnabled === true
-              ? `Tailscale Serve is on (port ${exposure.tailscaleServePort}).`
+              ? tailscaleEndpoint?.status === "available"
+                ? `Reachable on your tailnet at ${tailscaleEndpoint.httpBaseUrl}`
+                : (tailscaleEndpoint?.description ??
+                  `Tailscale Serve is on (port ${exposure.tailscaleServePort}), but no tailnet address is available yet. Check that Tailscale is installed and connected.`)
               : "Serve this server to other devices on your tailnet with Tailscale."
           }
           control={
@@ -1274,8 +1291,9 @@ function RemoteAccessSettingsSection() {
       <MobilePairingDialog
         open={isMobilePairingOpen}
         onOpenChange={setIsMobilePairingOpen}
-        endpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
-        networkAccessible={isNetworkAccessible || exposure?.tailscaleServeEnabled === true}
+        endpoints={pairableEndpoints}
+        fallbackEndpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
+        unavailableReason={pairingUnavailableReason(advertisedEndpoints)}
       />
     </>
   );

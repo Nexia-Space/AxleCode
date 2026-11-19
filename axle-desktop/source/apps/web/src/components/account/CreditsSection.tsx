@@ -21,7 +21,7 @@ import {
   type AxleModelRate,
   type AxleUsageEntry,
 } from "../../account/axleGateway";
-import { startCreditsCheckout } from "../billing/UpgradeDialog";
+import { describeCheckoutFailure, startCreditsCheckout } from "../billing/UpgradeDialog";
 import { resolveCloudPublicConfig } from "../../cloud/publicConfig";
 import { SettingsSection, useRelativeTimeTick } from "../settings/settingsLayout";
 import { Badge } from "../ui/badge";
@@ -382,8 +382,8 @@ function BuyCreditsSection() {
       setError(null);
       try {
         await startCreditsCheckout({ accountApiUrl, usd, email });
-      } catch {
-        setError("Could not start checkout. Please try again.");
+      } catch (error) {
+        setError(describeCheckoutFailure(error));
       } finally {
         setBusy(false);
       }

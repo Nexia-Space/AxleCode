@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 
 import { useAccountState } from "../../account/AccountAuthProvider";
 import { useAccountSnapshot } from "../../account/useAccountSnapshot";
-import { startPlanCheckout } from "../billing/UpgradeDialog";
+import { describeCheckoutFailure, startPlanCheckout } from "../billing/UpgradeDialog";
 import { PlanCard } from "../billing/PlanPackages";
 import { resolveCloudPublicConfig } from "../../cloud/publicConfig";
 import { PLAN_ORDER, planTierFromId, type PlanTier } from "../../entitlements/planCatalog";
@@ -40,8 +40,8 @@ export function BillingPlanSection() {
       setCheckoutError(null);
       try {
         await startPlanCheckout({ accountApiUrl, plan: tier, email });
-      } catch {
-        setCheckoutError("Could not start checkout. Please try again.");
+      } catch (error) {
+        setCheckoutError(describeCheckoutFailure(error));
       } finally {
         setCheckoutBusy(null);
       }

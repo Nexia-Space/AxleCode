@@ -251,6 +251,10 @@ import {
 import { SidebarProviderUpdatePill } from "./sidebar/SidebarProviderUpdatePill";
 import { getModelProviderPresentation } from "./chat/providerIconUtils";
 import { MobilePairingDialog } from "./settings/MobilePairingDialog";
+import {
+  pairableAdvertisedEndpoints,
+  pairingUnavailableReason,
+} from "./settings/SettingsPanels.logic";
 import { desktopNetworkAccessStateAtom } from "../state/desktopNetworkAccess";
 const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
   updated_at: "Last user message",
@@ -279,8 +283,11 @@ const SidebarRemoteAccessEntry = memo(function SidebarRemoteAccessEntry() {
   const primaryHttpBaseUrl = useEnvironmentHttpBaseUrl(primaryEnvironment?.environmentId ?? null);
   const snapshot = AsyncResult.getOrElse(networkAccess, () => null);
   const exposure = snapshot?.serverExposureState ?? null;
-  const networkAccessible =
-    exposure?.mode === "network-accessible" || exposure?.tailscaleServeEnabled === true;
+  const advertisedEndpoints = snapshot?.advertisedEndpoints ?? [];
+  const pairableEndpoints = useMemo(
+    () => pairableAdvertisedEndpoints(advertisedEndpoints),
+    [advertisedEndpoints],
+  );
 
   return (
     <>
@@ -299,8 +306,9 @@ const SidebarRemoteAccessEntry = memo(function SidebarRemoteAccessEntry() {
       <MobilePairingDialog
         open={isOpen}
         onOpenChange={setIsOpen}
-        endpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
-        networkAccessible={networkAccessible}
+        endpoints={pairableEndpoints}
+        fallbackEndpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
+        unavailableReason={pairingUnavailableReason(advertisedEndpoints)}
         showDownloadPrompt
       />
     </>

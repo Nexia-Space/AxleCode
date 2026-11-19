@@ -108,6 +108,37 @@ export function openExternalUrl(url: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+/**
+ * Say why checkout failed.
+ *
+ * Every call site used to discard the error and show "Could not start
+ * checkout. Please try again." - advice that is wrong for most of these
+ * causes, and which left no way to tell a misconfigured plan from an expired
+ * session. The failures below reach people through entirely different fixes,
+ * so they are worth naming.
+ */
+export function describeCheckoutFailure(error: unknown): string {
+  const code =
+    error !== null && typeof error === "object" && "code" in error
+      ? String((error as { readonly code: unknown }).code)
+      : null;
+  switch (code) {
+    case "unauthorized":
+      return "Your sign-in has expired. Sign out and back in, then try again.";
+    case "billing_not_configured":
+      return "Billing is not available for this plan yet. Please contact support.";
+    case "billing_provider_error":
+      return "The payment provider could not start a checkout. Try again shortly.";
+    default:
+      break;
+  }
+  // Nothing recognised: show what there is rather than inventing advice.
+  const detail = error instanceof Error ? error.message : String(error);
+  return detail.trim().length > 0
+    ? `Could not start checkout: ${detail}`
+    : "Could not start checkout. Please try again.";
+}
+
 /** Shared by the dialog and the billing page so both start checkout the same way. */
 export async function startPlanCheckout(options: {
   readonly accountApiUrl: string;
@@ -184,8 +215,8 @@ export function UpgradeDialogHost() {
       try {
         await startPlanCheckout({ accountApiUrl, plan: tier, email });
         closeUpgradeDialog();
-      } catch {
-        setCheckoutError("Could not start checkout. Please try again.");
+      } catch (error) {
+        setCheckoutError(describeCheckoutFailure(error));
       } finally {
         setCheckoutBusy(null);
       }

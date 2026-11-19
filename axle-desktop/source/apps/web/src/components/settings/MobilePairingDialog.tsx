@@ -1,7 +1,7 @@
 import { CheckIcon, CopyIcon, LoaderIcon, RefreshCwIcon, SmartphoneIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as DateTime from "effect/DateTime";
-import { AuthStandardClientScopes } from "@axle/contracts";
+import { AuthStandardClientScopes, type AdvertisedEndpoint } from "@axle/contracts";
 
 import {
   createServerPairingCredential,
@@ -22,14 +22,22 @@ import { QRCodeSvg } from "../ui/qr-code";
 type MobilePairingDialogProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly endpointUrl: string | null;
-  readonly networkAccessible: boolean;
+  /**
+   * Every advertised endpoint a phone could dial, best first. The dialog
+   * preselects the first available one and lets the person switch — a tailnet
+   * address is the only thing that works when the phone cannot cross to this
+   * computer's network.
+   */
+  readonly endpoints: ReadonlyArray<AdvertisedEndpoint>;
+  /** Fallback when nothing is advertised yet (loopback-only desktops). */
+  readonly fallbackEndpointUrl: string | null;
+  readonly unavailableReason?: string | null;
   readonly showDownloadPrompt?: boolean;
 };
 
 type PairingCredential = {
   readonly id: string;
-  readonly url: string;
+  readonly token: string;
   readonly expiresAt: string;
 };
 
@@ -51,8 +59,9 @@ function formatRemaining(milliseconds: number): string {
 export function MobilePairingDialog({
   open,
   onOpenChange,
-  endpointUrl,
-  networkAccessible,
+  endpoints,
+  fallbackEndpointUrl,
+  unavailableReason = null,
   showDownloadPrompt = false,
 }: MobilePairingDialogProps) {
   const [credential, setCredential] = useState<PairingCredential | null>(null);
@@ -60,6 +69,18 @@ export function MobilePairingDialog({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
+
+  const available = useMemo(
+    () => endpoints.filter((endpoint) => endpoint.status === "available"),
+    [endpoints],
+  );
+  const selected = useMemo(
+    () => available.find((endpoint) => endpoint.id === selectedEndpointId) ?? available[0] ?? null,
+    [available, selectedEndpointId],
+  );
+  const endpointUrl = selected?.httpBaseUrl ?? fallbackEndpointUrl;
+  const networkAccessible = endpointUrl !== null;
 
   const expiresAtMs = credential ? Date.parse(credential.expiresAt) : 0;
   const remainingMs = credential ? Math.max(0, expiresAtMs - now) : 0;
@@ -89,7 +110,7 @@ export function MobilePairingDialog({
       });
       setCredential({
         id: issued.id,
-        url: makePairingUrl(endpointUrl, issued.credential),
+        token: issued.credential,
         expiresAt: DateTime.formatIso(issued.expiresAt),
       });
       setNow(Date.now());
@@ -102,20 +123,32 @@ export function MobilePairingDialog({
     }
   }, [credential, endpointUrl]);
 
+  // The credential is a bare token, not bound to a host, so switching
+  // endpoints re-addresses the same code instead of burning it for a new one.
+  const pairingUrl = useMemo(
+    () =>
+      credential !== null && endpointUrl !== null
+        ? makePairingUrl(endpointUrl, credential.token)
+        : null,
+    [credential, endpointUrl],
+  );
+
   const copyUrl = useCallback(async () => {
-    if (credential === null) return;
-    await navigator.clipboard.writeText(credential.url);
+    if (pairingUrl === null) return;
+    await navigator.clipboard.writeText(pairingUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1_500);
-  }, [credential]);
+  }, [pairingUrl]);
 
   const status = useMemo(() => {
     if (!networkAccessible) {
-      return "Your phone needs local-network or Tailscale access to reach this Axle instance.";
+      return (
+        unavailableReason ??
+        "Your phone needs local-network or Tailscale access to reach this Axle instance."
+      );
     }
-    if (endpointUrl === null) return "Waiting for an address that your phone can reach.";
     return "Scan this code in Axle Mobile. The code expires after five minutes and can only be used once.";
-  }, [endpointUrl, networkAccessible]);
+  }, [networkAccessible, unavailableReason]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,11 +169,45 @@ export function MobilePairingDialog({
               </p>
             </div>
           ) : null}
-          {credential !== null && !expired ? (
+          {available.length > 1 ? (
+            <div className="w-full">
+              <p className="mb-1.5 text-xs font-medium text-foreground">Address to pair with</p>
+              <div className="flex flex-col gap-1">
+                {available.map((endpoint) => (
+                  <label
+                    key={endpoint.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-left has-checked:border-primary has-checked:bg-muted/30"
+                  >
+                    <input
+                      type="radio"
+                      name="axle-pairing-endpoint"
+                      value={endpoint.id}
+                      checked={selected?.id === endpoint.id}
+                      onChange={() => setSelectedEndpointId(endpoint.id)}
+                      className="size-3.5"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-medium text-foreground">
+                        {endpoint.label}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {endpoint.httpBaseUrl}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Pick the tailnet address when your phone is not on the same network as this
+                computer.
+              </p>
+            </div>
+          ) : null}
+          {credential !== null && pairingUrl !== null && !expired ? (
             <>
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                 <QRCodeSvg
-                  value={credential.url}
+                  value={pairingUrl}
                   size={220}
                   level="M"
                   marginSize={3}
@@ -155,7 +222,7 @@ export function MobilePairingDialog({
               </div>
               <div className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
                 <code className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-                  {credential.url}
+                  {pairingUrl}
                 </code>
                 <Button size="xs" variant="outline" onClick={() => void copyUrl()}>
                   {copied ? <CheckIcon /> : <CopyIcon />}

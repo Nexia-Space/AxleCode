@@ -1,4 +1,5 @@
 import { EnvironmentHttpApi } from "@axle/contracts";
+import serverPackageJson from "../package.json" with { type: "json" };
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { FetchHttpClient, HttpRouter, HttpServer } from "effect/unstable/http";
@@ -398,6 +399,7 @@ export const makeServerLayer = Layer.unwrap(
           const state = yield* makePersistedServerRuntimeState({
             config,
             port: address.port,
+            serverVersion: serverPackageJson.version,
             ...(process.env.AXLE_DAEMON === "1" ? { role: "daemon" as const } : {}),
           });
           yield* persistServerRuntimeState({

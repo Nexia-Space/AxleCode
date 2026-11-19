@@ -11,6 +11,11 @@ import * as NodePath from "node:path";
 import * as ServerConfig from "./config.ts";
 import { runServerCommand } from "./cli/server.ts";
 import { sharedServerCommandFlags, type CliServerFlags } from "./cli/config.ts";
+import {
+  daemonLauncherEnvironmentFromProcess,
+  resolveDaemonLauncher,
+  type DaemonLauncherCommand,
+} from "./daemonLauncher.ts";
 
 const SERVICE_NAME = "com.axle.desktop-daemon";
 const LINUX_SERVICE_NAME = "axle-daemon.service";
@@ -43,10 +48,16 @@ type DaemonServiceFlags = {
 
 const shellQuote = (value: string): string => `'${value.replaceAll("'", "'\\''")}'`;
 
-const daemonEntryPath = (): string => process.argv[1] ?? "axle";
+/**
+ * Throws DaemonLauncherUnstableError rather than recording a command that only
+ * resolves for the lifetime of this process — see daemonLauncher.ts.
+ */
+const daemonLauncher = (): DaemonLauncherCommand =>
+  resolveDaemonLauncher(daemonLauncherEnvironmentFromProcess(false));
 
 const daemonInvocation = (flags: DaemonServiceFlags): ReadonlyArray<string> => {
-  const args = [daemonEntryPath(), "daemon", "run", "--no-browser"];
+  const launcher = daemonLauncher();
+  const args = [...launcher.args, "daemon", "run", "--no-browser"];
   const host = Option.getOrUndefined(flags.host);
   const port = Option.getOrUndefined(flags.port);
   const baseDir = Option.getOrUndefined(flags.baseDir);
@@ -57,7 +68,7 @@ const daemonInvocation = (flags: DaemonServiceFlags): ReadonlyArray<string> => {
 };
 
 const daemonInvocationString = (flags: DaemonServiceFlags): string =>
-  [process.execPath, ...daemonInvocation(flags)].map(shellQuote).join(" ");
+  [daemonLauncher().command, ...daemonInvocation(flags)].map(shellQuote).join(" ");
 
 const resolveStatePath = (flags: DaemonServiceFlags): string => {
   const baseDir =

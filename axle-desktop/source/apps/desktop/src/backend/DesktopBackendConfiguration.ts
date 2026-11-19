@@ -111,6 +111,8 @@ const DaemonRuntimeState = Schema.Struct({
   role: Schema.Literal("daemon"),
   port: Schema.Int,
   origin: Schema.String,
+  // Older daemons predate this field, so its absence is itself a mismatch.
+  serverVersion: Schema.optional(Schema.String),
 });
 const decodeDaemonRuntimeState = Schema.decodeUnknownEffect(
   Schema.fromJsonString(DaemonRuntimeState),
@@ -681,6 +683,23 @@ export const make = Effect.gen(function* () {
       Effect.option,
     );
     if (Option.isNone(runtime)) return Option.none();
+
+    // A daemon built from a different revision serves client assets this app
+    // does not match, which renders as an empty window with nothing logged.
+    // Decline it and start our own backend instead; the daemon keeps running
+    // for whoever else is using it.
+    const daemonVersion = runtime.value.serverVersion;
+    if (daemonVersion !== serverPackageJson.version) {
+      yield* Effect.logWarning(
+        "Ignoring the Axle daemon because it is a different build. Restart it with `axle daemon restart` to use it again.",
+        {
+          daemonVersion: daemonVersion ?? "unknown (predates version reporting)",
+          expectedVersion: serverPackageJson.version,
+          daemonOrigin: runtime.value.origin,
+        },
+      );
+      return Option.none();
+    }
 
     const token = yield* fileSystem.readFileString(tokenPath).pipe(
       Effect.map((value) => value.trim()),
