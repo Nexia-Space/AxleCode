@@ -2,6 +2,8 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   DaemonLauncherUnstableError,
+  installedCommandFromLaunchdPlist,
+  installedCommandFromSystemdUnit,
   resolveDaemonLauncher,
   type DaemonLauncherEnvironment,
 } from "./daemonLauncher.ts";
@@ -106,5 +108,63 @@ describe("resolveDaemonLauncher", () => {
     expect(() => resolveDaemonLauncher(environment({ entryScript: undefined }))).toThrow(
       DaemonLauncherUnstableError,
     );
+  });
+});
+
+describe("installedCommandFromSystemdUnit", () => {
+  const unit = (execStart: string) =>
+    `[Unit]\nDescription=Axle desktop daemon\n\n[Service]\nExecStart=${execStart}\nRestart=on-failure\n`;
+
+  it("reads back a shell-quoted command written by the installer", () => {
+    expect(
+      installedCommandFromSystemdUnit(
+        unit("'/home/user/Applications/Axle.AppImage' 'daemon' 'run' '--no-browser'"),
+      ),
+    ).toBe("/home/user/Applications/Axle.AppImage");
+  });
+
+  it("reads a node plus entry-script invocation", () => {
+    expect(
+      installedCommandFromSystemdUnit(unit("'/usr/bin/node' '/opt/axle/dist/bin.mjs' 'daemon'")),
+    ).toBe("/usr/bin/node");
+  });
+
+  it("undoes the single-quote escape", () => {
+    expect(
+      installedCommandFromSystemdUnit(unit("'/home/o'\\''brien/Axle.AppImage' 'daemon'")),
+    ).toBe("/home/o'brien/Axle.AppImage");
+  });
+
+  it("handles an unquoted command", () => {
+    expect(installedCommandFromSystemdUnit(unit("/usr/bin/axle daemon run"))).toBe("/usr/bin/axle");
+  });
+
+  it("returns null when there is no ExecStart", () => {
+    expect(installedCommandFromSystemdUnit("[Unit]\nDescription=x\n")).toBeNull();
+    expect(installedCommandFromSystemdUnit(unit(""))).toBeNull();
+  });
+});
+
+describe("installedCommandFromLaunchdPlist", () => {
+  it("reads the first ProgramArguments entry", () => {
+    const plist = `<plist version="1.0"><dict>
+  <key>Label</key><string>com.axle.desktop-daemon</string>
+  <key>ProgramArguments</key><array>
+    <string>/Applications/Axle.app/Contents/MacOS/Axle</string>
+    <string>daemon</string>
+  </array>
+</dict></plist>`;
+    expect(installedCommandFromLaunchdPlist(plist)).toBe(
+      "/Applications/Axle.app/Contents/MacOS/Axle",
+    );
+  });
+
+  it("decodes the entities the installer escapes", () => {
+    const plist = `<key>ProgramArguments</key><array><string>/Apps/A&amp;B&lt;1/Axle</string></array>`;
+    expect(installedCommandFromLaunchdPlist(plist)).toBe("/Apps/A&B<1/Axle");
+  });
+
+  it("returns null when ProgramArguments is absent", () => {
+    expect(installedCommandFromLaunchdPlist("<plist><dict></dict></plist>")).toBeNull();
   });
 });

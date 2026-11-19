@@ -107,3 +107,37 @@ export function daemonLauncherEnvironmentFromProcess(
     appImagePath: process.env.APPIMAGE,
   };
 }
+
+/**
+ * The executable a previously written systemd unit starts.
+ *
+ * Installed units are the only record of which app a service belongs to, so
+ * reading the command back is how we tell a healthy install from one left
+ * behind by an app that has since been moved, replaced, or deleted.
+ *
+ * `ExecStart` is shell-quoted by {@link daemonInvocationString}, so unwrap one
+ * layer of single quotes and undo the `'\''` escape.
+ */
+export function installedCommandFromSystemdUnit(unitText: string): string | null {
+  const match = /^ExecStart=(.*)$/m.exec(unitText);
+  const execStart = match?.[1]?.trim();
+  if (execStart === undefined || execStart.length === 0) return null;
+  if (!execStart.startsWith("'")) {
+    const [bare] = execStart.split(" ");
+    return bare !== undefined && bare.length > 0 ? bare : null;
+  }
+  const closing = execStart.indexOf("' ", 1);
+  const quoted = closing === -1 ? execStart.slice(1, -1) : execStart.slice(1, closing);
+  const unquoted = quoted.replaceAll("'\\''", "'");
+  return unquoted.length > 0 ? unquoted : null;
+}
+
+/** The executable a previously written launchd plist starts. */
+export function installedCommandFromLaunchdPlist(plistText: string): string | null {
+  const match = /<key>ProgramArguments<\/key>\s*<array>\s*<string>([^<]*)<\/string>/.exec(
+    plistText,
+  );
+  const command = match?.[1]?.trim();
+  if (command === undefined || command.length === 0) return null;
+  return command.replaceAll("&lt;", "<").replaceAll("&amp;", "&");
+}
