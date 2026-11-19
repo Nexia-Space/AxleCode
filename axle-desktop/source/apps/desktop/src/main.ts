@@ -14,6 +14,7 @@ import { resolveRemoteT3CliPackageSpec } from "@axle/ssh/command";
 import type { RemoteT3RunnerOptions } from "@axle/ssh/tunnel";
 import serverPackageJson from "../../server/package.json" with { type: "json" };
 
+import { isDaemonMode, runDaemon } from "./daemonMode.ts";
 import * as DesktopIpc from "./ipc/DesktopIpc.ts";
 import * as ElectronApp from "./electron/ElectronApp.ts";
 import * as ElectronDialog from "./electron/ElectronDialog.ts";
@@ -54,9 +55,18 @@ import * as DesktopWindow from "./window/DesktopWindow.ts";
 import * as DesktopWslBackend from "./wsl/DesktopWslBackend.ts";
 import * as DesktopWslEnvironment from "./wsl/DesktopWslEnvironment.ts";
 
-// Custom renderer schemes must be privileged before Electron's ready event so
-// relative JS/CSS assets have a real origin instead of the opaque `null` origin.
-ElectronProtocol.registerDesktopSchemesAsPrivileged();
+// A service unit starts this same binary with AXLE_DAEMON=1 to get a headless
+// backend. Handle it before any Electron lifecycle call, so the daemon never
+// claims the single-instance lock the real window needs.
+if (isDaemonMode()) {
+  void runDaemon(__dirname).then((code) => {
+    process.exit(code);
+  });
+} else {
+  // Custom renderer schemes must be privileged before Electron's ready event so
+  // relative JS/CSS assets have a real origin instead of the opaque `null` origin.
+  ElectronProtocol.registerDesktopSchemesAsPrivileged();
+}
 
 const desktopEnvironmentLayer = Layer.unwrap(
   Effect.gen(function* () {
@@ -193,4 +203,8 @@ const desktopRuntimeLayer = desktopApplicationLayer.pipe(
   Layer.provideMerge(electronLayer),
 );
 
-DesktopApp.program.pipe(Effect.provide(desktopRuntimeLayer), NodeRuntime.runMain);
+// Daemon mode already owns this process; starting the windowed app here would
+// defeat the point and take the instance lock.
+if (!isDaemonMode()) {
+  DesktopApp.program.pipe(Effect.provide(desktopRuntimeLayer), NodeRuntime.runMain);
+}

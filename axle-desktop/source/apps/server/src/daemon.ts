@@ -53,7 +53,10 @@ const shellQuote = (value: string): string => `'${value.replaceAll("'", "'\\''")
  * resolves for the lifetime of this process — see daemonLauncher.ts.
  */
 const daemonLauncher = (): DaemonLauncherCommand =>
-  resolveDaemonLauncher(daemonLauncherEnvironmentFromProcess(false));
+  // The bundled server has no Electron to ask, so the desktop app sets this
+  // when it installs the service on our behalf. Absent means the standalone
+  // CLI, where execPath and argv[1] are already stable paths.
+  resolveDaemonLauncher(daemonLauncherEnvironmentFromProcess(process.env.AXLE_PACKAGED === "1"));
 
 const daemonInvocation = (flags: DaemonServiceFlags): ReadonlyArray<string> => {
   const launcher = daemonLauncher();
