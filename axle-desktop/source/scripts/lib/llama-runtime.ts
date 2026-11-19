@@ -48,6 +48,20 @@ export function llamaServerExecutableName(platform: LlamaRuntimePlatform): strin
   return platform === "win" ? "llama-server.exe" : "llama-server";
 }
 
+/**
+ * The binary name inside one runtime directory.
+ *
+ * A Windows artifact carries a `linux-<arch>` runtime for the WSL backend, and
+ * that one is a Linux ELF named `llama-server` - deriving the name from the
+ * build target instead of the directory looks for `llama-server.exe` inside it
+ * and fails a release that is in fact complete.
+ */
+export function llamaServerExecutableNameForDirectory(directory: string): string {
+  return directory.startsWith(`${NATIVE_PLATFORM_DIRECTORY.win}-`)
+    ? "llama-server.exe"
+    : "llama-server";
+}
+
 export class MissingLlamaRuntimeError extends Error {
   readonly platform: LlamaRuntimePlatform;
   readonly arch: LlamaRuntimeArch;
@@ -101,7 +115,6 @@ export async function pruneLlamaRuntimes(input: {
   readonly requireRuntime: boolean;
 }): Promise<LlamaRuntimePruneResult> {
   const requiredDirectories = resolveLlamaRuntimeDirectories(input.platform, input.arch);
-  const executableName = llamaServerExecutableName(input.platform);
 
   const entries = await NodeFSP.readdir(input.llamaRoot, { withFileTypes: true }).catch(
     (cause: NodeJS.ErrnoException) => {
@@ -120,7 +133,11 @@ export async function pruneLlamaRuntimes(input: {
     const missingExecutables: string[] = [];
     for (const directory of requiredDirectories) {
       if (!presentDirectories.has(directory)) continue;
-      const executablePath = NodePath.join(input.llamaRoot, directory, executableName);
+      const executablePath = NodePath.join(
+        input.llamaRoot,
+        directory,
+        llamaServerExecutableNameForDirectory(directory),
+      );
       const executableStat = await NodeFSP.stat(executablePath).catch(() => undefined);
       if (!executableStat?.isFile()) {
         missingExecutables.push(executablePath);
