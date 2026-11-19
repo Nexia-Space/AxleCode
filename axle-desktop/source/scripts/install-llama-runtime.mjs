@@ -10,6 +10,10 @@
  * Set AXLE_LLAMA_CPP_RELEASE_URL to a GitHub release API URL or a direct zip /
  * tar.gz URL to pin a build, and AXLE_LLAMA_SERVER_PATH to reuse an existing
  * binary instead.
+ *
+ * Pass `--platform <mac|linux|win>` and `--arch <arm64|x64>` to stage a
+ * runtime for a cross-built artifact (for example an Intel DMG built on an
+ * Apple Silicon runner). Without them the host platform/arch is used.
  */
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFSP from "node:fs/promises";
@@ -20,15 +24,42 @@ import { fileURLToPath } from "node:url";
 const repoRoot = NodePath.resolve(NodePath.dirname(fileURLToPath(import.meta.url)), "..");
 const resourcesRoot = NodePath.join(repoRoot, "apps", "desktop", "resources", "axle", "llama");
 
+function readFlag(name) {
+  const index = process.argv.indexOf(`--${name}`);
+  if (index === -1) return undefined;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`--${name} requires a value.`);
+  }
+  return value;
+}
+
+function normalizePlatform(value) {
+  if (value === undefined) return process.platform;
+  if (value === "mac" || value === "macos" || value === "darwin") return "darwin";
+  if (value === "win" || value === "windows" || value === "win32") return "win32";
+  if (value === "linux") return "linux";
+  throw new Error(`Unsupported --platform value: ${value}. Use mac, linux, or win.`);
+}
+
+function normalizeArch(value) {
+  if (value === undefined) return process.arch;
+  if (value === "arm64") return "arm64";
+  if (value === "x64" || value === "amd64") return "x64";
+  throw new Error(`Unsupported --arch value: ${value}. Use arm64 or x64.`);
+}
+
+const targetPlatform = normalizePlatform(readFlag("platform"));
+const targetArch = normalizeArch(readFlag("arch"));
+
 const platformKey = (() => {
-  if (process.platform === "win32") return process.arch === "arm64" ? "win32-arm64" : "win32-x64";
-  if (process.platform === "darwin")
-    return process.arch === "arm64" ? "darwin-arm64" : "darwin-x64";
-  if (process.platform === "linux") return process.arch === "arm64" ? "linux-arm64" : "linux-x64";
+  if (targetPlatform === "win32") return targetArch === "arm64" ? "win32-arm64" : "win32-x64";
+  if (targetPlatform === "darwin") return targetArch === "arm64" ? "darwin-arm64" : "darwin-x64";
+  if (targetPlatform === "linux") return targetArch === "arm64" ? "linux-arm64" : "linux-x64";
   return undefined;
 })();
 
-const binaryName = process.platform === "win32" ? "llama-server.exe" : "llama-server";
+const binaryName = targetPlatform === "win32" ? "llama-server.exe" : "llama-server";
 
 function log(message) {
   process.stdout.write(`[llama-runtime] ${message}\n`);
@@ -70,16 +101,16 @@ async function downloadFile(url, destination) {
 }
 
 function pickAsset(assets) {
-  const architecture = process.arch === "arm64" ? "arm64" : "x64";
+  const architecture = targetArch === "arm64" ? "arm64" : "x64";
   const candidates =
-    process.platform === "win32"
+    targetPlatform === "win32"
       ? [
           new RegExp(`bin-win-vulkan-${architecture}\\.zip$`, "iu"),
           new RegExp(`bin-win-cpu-${architecture}\\.zip$`, "iu"),
           new RegExp(`bin-win-avx2-${architecture}\\.zip$`, "iu"),
           new RegExp(`bin-win-cuda-\\d+\\.\\d+-${architecture}\\.zip$`, "iu"),
         ]
-      : process.platform === "darwin"
+      : targetPlatform === "darwin"
         ? [new RegExp(`bin-macos-${architecture}\\.(?:zip|tar\\.gz)$`, "iu")]
         : [
             // Plain Ubuntu builds are the most portable and cover both x64
@@ -224,7 +255,7 @@ async function copyDirectory(source, destination) {
 
 async function main() {
   if (!platformKey) {
-    throw new Error(`Unsupported platform ${process.platform}/${process.arch}.`);
+    throw new Error(`Unsupported platform ${targetPlatform}/${targetArch}.`);
   }
   const explicit = process.env.AXLE_LLAMA_SERVER_PATH?.trim();
   if (explicit) {
@@ -257,7 +288,7 @@ async function main() {
     if (!binary) throw new Error(`The archive did not contain ${binaryName}.`);
     await NodeFSP.rm(targetDir, { recursive: true, force: true });
     await copyDirectory(NodePath.dirname(binary), targetDir);
-    if (process.platform !== "win32") {
+    if (targetPlatform !== "win32") {
       await NodeFSP.chmod(NodePath.join(targetDir, binaryName), 0o755);
     }
     log(`Installed runtime at ${NodePath.join(targetDir, binaryName)}`);

@@ -402,7 +402,7 @@ jobs:
         run: node scripts/update-release-package-versions.ts "${{ needs.preflight.outputs.version }}"
 
       - name: Install Axle Offline runtime
-        run: pnpm local-runtime:install
+        run: pnpm local-runtime:install --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -515,6 +515,9 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD || secrets.APPLE_ID_PASSWORD }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           MACOS_PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
           T3CODE_NEON_AUTH_PASSKEY_RP_DOMAINS: ${{ vars.NEON_AUTH_PASSKEY_RP_DOMAINS }}
@@ -544,26 +547,39 @@ jobs:
           }
 
           if [[ "${{ matrix.platform }}" == "mac" ]]; then
-            if has_all "$CSC_LINK" "$CSC_KEY_PASSWORD" "$APPLE_API_KEY" "$APPLE_API_KEY_ID" "$APPLE_API_ISSUER"; then
-              if ! has_all "$APPLE_TEAM_ID" "$MACOS_PROVISIONING_PROFILE"; then
-                echo "macOS signing is configured, but APPLE_TEAM_ID or MACOS_PROVISIONING_PROFILE is missing." >&2
+            if ! has_all "$CSC_LINK" "$CSC_KEY_PASSWORD"; then
+              if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+                echo "::error::Tagged macOS releases require CSC_LINK and CSC_KEY_PASSWORD (Developer ID Application certificate)." >&2
                 exit 1
               fi
-
+              echo "macOS signing disabled (missing Developer ID certificate)."
+            elif has_all "$APPLE_API_KEY" "$APPLE_API_KEY_ID" "$APPLE_API_ISSUER"; then
               key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
               printf '%s' "$APPLE_API_KEY" > "$key_path"
               export APPLE_API_KEY="$key_path"
+              args+=(--signed)
+              echo "macOS signing and notarization enabled (App Store Connect API key)."
+            elif has_all "$APPLE_ID" "${APPLE_APP_SPECIFIC_PASSWORD:-$APPLE_ID_PASSWORD}" "$APPLE_TEAM_ID"; then
+              export APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-$APPLE_ID_PASSWORD}"
+              export T3CODE_APPLE_TEAM_ID="$APPLE_TEAM_ID"
+              args+=(--signed)
+              echo "macOS signing and notarization enabled (Apple ID)."
+            else
+              if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+                echo "::error::Tagged macOS releases require notarization credentials: APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER, or APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID." >&2
+                exit 1
+              fi
+              echo "macOS signing disabled (missing notarization credentials)."
+            fi
 
+            # Passkey entitlements are opt-in. A plain Developer ID build only
+            # needs the certificate and notarization credentials.
+            if has_all "$APPLE_TEAM_ID" "$MACOS_PROVISIONING_PROFILE"; then
               profile_path="$RUNNER_TEMP/t3code.provisionprofile"
               printf '%s' "$MACOS_PROVISIONING_PROFILE" | base64 -D > "$profile_path"
               security cms -D -i "$profile_path" >/dev/null
               export T3CODE_APPLE_TEAM_ID="$APPLE_TEAM_ID"
               export T3CODE_MACOS_PROVISIONING_PROFILE="$profile_path"
-
-              echo "macOS signing enabled."
-              args+=(--signed)
-            else
-              echo "macOS signing disabled (missing one or more Apple signing secrets)."
             fi
           elif [[ "${{ matrix.platform }}" == "win" ]]; then
             # Bundle the Linux node-pty binary built by the build_wsl_node_pty job
@@ -590,6 +606,45 @@ jobs:
           fi
 
           vp run dist:desktop:artifact "${args[@]}"
+
+      - name: Validate macOS release
+        if: matrix.platform == 'mac'
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD || secrets.APPLE_ID_PASSWORD }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        run: |
+          set -euo pipefail
+          signed=false
+          if [[ -n "${CSC_LINK:-}" && -n "${CSC_KEY_PASSWORD:-}" ]]; then
+            if [[ -n "${APPLE_API_KEY:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
+              signed=true
+            elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_APP_SPECIFIC_PASSWORD:-${APPLE_ID_PASSWORD:-}}" ]]; then
+              signed=true
+            fi
+          fi
+          args=("release/Axle-${{ matrix.arch }}.dmg" --arch "${{ matrix.arch }}" --version "${{ needs.preflight.outputs.version }}")
+          if [[ "$signed" != "true" ]]; then
+            if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+              echo "::error::A tagged macOS release must be signed and notarized." >&2
+              exit 1
+            fi
+            args+=(--allow-unsigned)
+          fi
+          node scripts/validate-macos-release.ts "${args[@]}"
+
+      - name: Write macOS checksums
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shasum -a 256 "release/Axle-${{ matrix.arch }}.dmg" "release/Axle-${{ matrix.arch }}.zip" > "release/Axle-${{ matrix.arch }}.sha256"
 
       - name: Sign Linux AppImage
         if: matrix.platform == 'linux'
@@ -631,6 +686,7 @@ jobs:
           for pattern in \
             "release/*.dmg" \
             "release/*.zip" \
+            "release/*.sha256" \
             "release/*.AppImage" \
             "release/*.AppImage.asc" \
             "release/*.exe" \

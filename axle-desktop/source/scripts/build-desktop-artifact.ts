@@ -16,6 +16,16 @@ import {
   type WebAssetBrand,
 } from "./lib/brand-assets.ts";
 import { getDefaultBuildArch } from "./lib/build-target-arch.ts";
+import {
+  auditBundleSymlinks,
+  copyStagedResources,
+  pruneLlamaRuntimes,
+} from "./lib/llama-runtime.ts";
+import {
+  describeMacNotarizationRequirements,
+  isMissingMacNotarizationCredentials,
+  resolveMacNotarizationCredentials,
+} from "./lib/mac-notarization.ts";
 import { loadRepoEnv } from "./lib/public-config.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
 
@@ -144,6 +154,8 @@ interface BuildCliInput {
   readonly skipBuild: Option.Option<boolean>;
   readonly keepStage: Option.Option<boolean>;
   readonly signed: Option.Option<boolean>;
+  readonly skipNotarization: Option.Option<boolean>;
+  readonly allowMissingLlamaRuntime: Option.Option<boolean>;
   readonly verbose: Option.Option<boolean>;
   readonly mockUpdates: Option.Option<boolean>;
   readonly mockUpdateServerPort: Option.Option<number>;
@@ -375,6 +387,52 @@ export class MacProvisioningProfileNotFoundError extends Schema.TaggedErrorClass
   }
 }
 
+export class MacNotarizationCredentialsMissingError extends Schema.TaggedErrorClass<MacNotarizationCredentialsMissingError>()(
+  "MacNotarizationCredentialsMissingError",
+  {
+    missing: Schema.Array(Schema.String),
+    requirements: Schema.String,
+  },
+) {
+  override get message(): string {
+    return [
+      `macOS signing is enabled but notarization credentials are incomplete (missing: ${this.missing.join(", ")}).`,
+      this.requirements,
+    ].join("\n");
+  }
+}
+
+export class DesktopLlamaRuntimePackagingError extends Schema.TaggedErrorClass<DesktopLlamaRuntimePackagingError>()(
+  "DesktopLlamaRuntimePackagingError",
+  {
+    platform: BuildPlatform,
+    arch: BuildArch,
+    reason: Schema.String,
+  },
+) {
+  override get message(): string {
+    return `Cannot package the Axle Offline runtime for ${this.platform}/${this.arch}: ${this.reason}`;
+  }
+}
+
+export class DesktopResourceSymlinkError extends Schema.TaggedErrorClass<DesktopResourceSymlinkError>()(
+  "DesktopResourceSymlinkError",
+  {
+    dangling: Schema.Array(Schema.String),
+    absolute: Schema.Array(Schema.String),
+  },
+) {
+  override get message(): string {
+    const details = [
+      this.dangling.length > 0 ? `dangling: ${this.dangling.join(", ")}` : undefined,
+      this.absolute.length > 0 ? `absolute: ${this.absolute.join(", ")}` : undefined,
+    ]
+      .filter((line): line is string => line !== undefined)
+      .join("; ");
+    return `Packaged resources contain invalid symlinks (${details}).`;
+  }
+}
+
 export class DesktopBuildDistDirectoryMissingError extends Schema.TaggedErrorClass<DesktopBuildDistDirectoryMissingError>()(
   "DesktopBuildDistDirectoryMissingError",
   {
@@ -578,6 +636,8 @@ interface ResolvedBuildOptions {
   readonly skipBuild: boolean;
   readonly keepStage: boolean;
   readonly signed: boolean;
+  readonly skipNotarization: boolean;
+  readonly allowMissingLlamaRuntime: boolean;
   readonly verbose: boolean;
   readonly mockUpdates: boolean;
   readonly mockUpdateServerPort: number | undefined;
@@ -607,6 +667,7 @@ interface StagePackageJson {
 
 export const STAGE_INSTALL_ARGS = ["install", "--prod"] as const;
 export const DESKTOP_ASAR_UNPACK = ["node_modules/@ff-labs/fff-bin-*/**/*"] as const;
+export const MAC_ENTITLEMENTS_RELATIVE_PATH = "apps/desktop/resources/entitlements.mac.plist";
 
 export interface MacPasskeySigningConfiguration {
   readonly appId: string;
@@ -957,6 +1018,12 @@ const BuildEnvConfig = Config.all({
   skipBuild: Config.boolean("T3CODE_DESKTOP_SKIP_BUILD").pipe(Config.withDefault(false)),
   keepStage: Config.boolean("T3CODE_DESKTOP_KEEP_STAGE").pipe(Config.withDefault(false)),
   signed: Config.boolean("T3CODE_DESKTOP_SIGNED").pipe(Config.withDefault(false)),
+  skipNotarization: Config.boolean("T3CODE_DESKTOP_SKIP_NOTARIZATION").pipe(
+    Config.withDefault(false),
+  ),
+  allowMissingLlamaRuntime: Config.boolean("T3CODE_DESKTOP_ALLOW_MISSING_LLAMA_RUNTIME").pipe(
+    Config.withDefault(false),
+  ),
   verbose: Config.boolean("T3CODE_DESKTOP_VERBOSE").pipe(Config.withDefault(false)),
   mockUpdates: Config.boolean("T3CODE_DESKTOP_MOCK_UPDATES").pipe(Config.withDefault(false)),
   mockUpdateServerPort: Config.string("T3CODE_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(Config.option),
@@ -1034,6 +1101,11 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const skipBuild = resolveBooleanFlag(input.skipBuild, env.skipBuild);
   const keepStage = resolveBooleanFlag(input.keepStage, env.keepStage);
   const signed = resolveBooleanFlag(input.signed, env.signed);
+  const skipNotarization = resolveBooleanFlag(input.skipNotarization, env.skipNotarization);
+  const allowMissingLlamaRuntime = resolveBooleanFlag(
+    input.allowMissingLlamaRuntime,
+    env.allowMissingLlamaRuntime,
+  );
   const verbose = resolveBooleanFlag(input.verbose, env.verbose);
 
   const mockUpdates = resolveBooleanFlag(input.mockUpdates, env.mockUpdates);
@@ -1060,6 +1132,8 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     skipBuild,
     keepStage,
     signed,
+    skipNotarization,
+    allowMissingLlamaRuntime,
     verbose,
     mockUpdates,
     mockUpdateServerPort,
@@ -1468,6 +1542,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         readonly provisioningProfilePath: string;
       }
     | undefined,
+  macEntitlementsPath: string = MAC_ENTITLEMENTS_RELATIVE_PATH,
 ) {
   const buildConfig: Record<string, unknown> = {
     appId: DESKTOP_APP_ID,
@@ -1512,10 +1587,23 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   }
 
   if (platform === "mac") {
+    const entitlementsPath = macPasskeySigning?.entitlementsPath ?? macEntitlementsPath;
     buildConfig.mac = {
       target: target === "dmg" ? [target, "zip"] : [target],
       icon: "icon.icns",
       category: "public.app-category.developer-tools",
+      // Signing is opt-in through --signed. Once enabled, a missing Developer
+      // ID identity must fail the build instead of silently producing the
+      // broken unsigned bundle that shipped as 1.1.53.
+      forceCodeSigning: signed,
+      hardenedRuntime: true,
+      gatekeeperAssess: false,
+      entitlements: entitlementsPath,
+      entitlementsInherit: entitlementsPath,
+      // electron-builder notarizes the .app after signing and stapling it
+      // before the DMG is created. Credentials come from the environment and
+      // the build fails earlier if they are missing.
+      notarize: signed,
       protocols: [
         {
           name: "Axle",
@@ -1524,7 +1612,6 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       ],
       ...(macPasskeySigning
         ? {
-            entitlements: macPasskeySigning.entitlementsPath,
             provisioningProfile: macPasskeySigning.provisioningProfilePath,
           }
         : {}),
@@ -1752,15 +1839,9 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const bundledClientEntry = path.join(distDirs.serverDist, "client/index.html");
 
   if (!options.skipBuild) {
-    yield* Effect.log("[desktop-artifact] Building desktop/server/web artifacts...");
-    const spawnCommand = yield* resolveSpawnCommand("vp", ["run", "build:desktop"]);
-    yield* runCommand(
-      ChildProcess.make(spawnCommand.command, spawnCommand.args, {
-        cwd: repoRoot,
-        shell: spawnCommand.shell,
-      }),
-      { label: "vp run build:desktop", verbose: options.verbose },
-    );
+    // `vp run build:desktop` ends with stage-desktop-runtime, which copies
+    // target/release/axle into the server bundle. Build the Rust runtime first
+    // so a clean checkout can run this script directly.
     const rustRoot = path.resolve(repoRoot, "../..");
     yield* Effect.log("[desktop-artifact] Building the Axle Rust runtime...");
     const cargoCommand = yield* resolveSpawnCommand("cargo", [
@@ -1775,6 +1856,15 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
         shell: cargoCommand.shell,
       }),
       { label: "cargo build --release --package axle_cli", verbose: options.verbose },
+    );
+    yield* Effect.log("[desktop-artifact] Building desktop/server/web artifacts...");
+    const spawnCommand = yield* resolveSpawnCommand("vp", ["run", "build:desktop"]);
+    yield* runCommand(
+      ChildProcess.make(spawnCommand.command, spawnCommand.args, {
+        cwd: repoRoot,
+        shell: spawnCommand.shell,
+      }),
+      { label: "vp run build:desktop", verbose: options.verbose },
     );
   }
 
@@ -1810,13 +1900,73 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   yield* Effect.log("[desktop-artifact] Staging release app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
-  yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
+  yield* Effect.tryPromise({
+    try: () =>
+      copyStagedResources({
+        source: distDirs.desktopResources,
+        destination: stageResourcesDir,
+        // Node rewrites relative symlinks to absolute ones during a copy. A
+        // Windows build materializes the Linux links later, so only POSIX
+        // targets keep them as links.
+        preserveSymlinks: options.platform !== "win",
+      }),
+    catch: (cause) =>
+      new DesktopLlamaRuntimePackagingError({
+        platform: options.platform,
+        arch: options.arch,
+        reason: `could not copy desktop resources: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
+  });
+
+  const llamaRoot = path.join(stageResourcesDir, "axle", "llama");
+  const llamaPrune = yield* Effect.tryPromise({
+    try: () =>
+      pruneLlamaRuntimes({
+        llamaRoot,
+        platform: options.platform,
+        arch: options.arch,
+        requireRuntime: !options.allowMissingLlamaRuntime,
+      }),
+    catch: (cause) =>
+      new DesktopLlamaRuntimePackagingError({
+        platform: options.platform,
+        arch: options.arch,
+        reason: cause instanceof Error ? cause.message : String(cause),
+      }),
+  });
+  if (llamaPrune.removed.length > 0) {
+    yield* Effect.log(
+      `[desktop-artifact] Removed llama.cpp runtimes for other targets: ${llamaPrune.removed.join(", ")}`,
+    );
+  }
+
   if (options.platform === "win") {
-    const linuxLlamaDir = path.join(stageResourcesDir, "axle", "llama", "linux-x64");
+    // The Windows installer carries the same-arch Linux runtime for WSL.
+    // Windows cannot store those Unix symlinks reliably, so replace each link
+    // with a copy of its target before electron-builder reads the resources.
+    const linuxArch = options.arch === "arm64" ? "arm64" : "x64";
+    const linuxLlamaDir = path.join(stageResourcesDir, "axle", "llama", `linux-${linuxArch}`);
     if (yield* fs.exists(linuxLlamaDir)) {
       yield* Effect.promise(() => materializeLinuxRuntimeSymlinks(linuxLlamaDir));
     }
   }
+
+  const symlinkAudit = yield* Effect.tryPromise({
+    try: () => auditBundleSymlinks(path.join(stageResourcesDir, "axle")),
+    catch: (cause) =>
+      new DesktopLlamaRuntimePackagingError({
+        platform: options.platform,
+        arch: options.arch,
+        reason: `could not inspect staged resources: ${cause instanceof Error ? cause.message : String(cause)}`,
+      }),
+  });
+  if (symlinkAudit.dangling.length > 0 || symlinkAudit.absolute.length > 0) {
+    return yield* new DesktopResourceSymlinkError({
+      dangling: symlinkAudit.dangling,
+      absolute: symlinkAudit.absolute,
+    });
+  }
+
   yield* fs.copy(distDirs.serverDist, path.join(stageAppDir, "apps/server/dist"));
   if (options.platform === "win") {
     const axleBinary = path.resolve(repoRoot, "../..", "target", "release", "axle.exe");
@@ -1854,8 +2004,23 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     repoRoot,
   );
 
-  // electron-builder is filtering out stageResourcesDir directory in the AppImage for production
-  yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
+  // electron-builder filters stageResourcesDir out of the AppImage, so Linux
+  // keeps the full fallback tree. Windows keeps it too (the WSL backend and
+  // ICO lookup rely on it). macOS only needs the two icons for the packaged
+  // dock icon; bundling the whole llama tree again inside app.asar doubles the
+  // download size for no benefit.
+  const prodResourcesDir = path.join(stageAppDir, "apps/desktop/prod-resources");
+  if (options.platform === "linux" || options.platform === "win") {
+    yield* fs.copy(stageResourcesDir, prodResourcesDir);
+  } else {
+    yield* fs.makeDirectory(prodResourcesDir, { recursive: true });
+    for (const iconFileName of ["icon.png", "icon.icns"]) {
+      const iconPath = path.join(stageResourcesDir, iconFileName);
+      if (yield* fs.exists(iconPath)) {
+        yield* fs.copyFile(iconPath, path.join(prodResourcesDir, iconFileName));
+      }
+    }
+  }
 
   const configuredMacPasskeySigning =
     options.platform === "mac" && options.signed
@@ -1942,6 +2107,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
             provisioningProfilePath: macPasskeySigning.provisioningProfilePath,
           }
         : undefined,
+      path.join(stageAppDir, MAC_ENTITLEMENTS_RELATIVE_PATH),
     ),
     dependencies: stageDependencies,
     devDependencies: {
@@ -1993,6 +2159,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const buildEnv: NodeJS.ProcessEnv = {
     ...process.env,
   };
+  // Older workflows stored the app-specific password under APPLE_ID_PASSWORD,
+  // but electron-builder only reads APPLE_APP_SPECIFIC_PASSWORD. Keep the
+  // alias so existing secret names still notarize.
+  if (!buildEnv.APPLE_APP_SPECIFIC_PASSWORD && buildEnv.APPLE_ID_PASSWORD) {
+    buildEnv.APPLE_APP_SPECIFIC_PASSWORD = buildEnv.APPLE_ID_PASSWORD;
+  }
   buildEnv.npm_config_user_agent = resolvePackageManagerUserAgent(rootPackageJson.packageManager);
   for (const [key, value] of Object.entries(buildEnv)) {
     if (value === "") {
@@ -2006,6 +2178,55 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     delete buildEnv.APPLE_API_KEY;
     delete buildEnv.APPLE_API_KEY_ID;
     delete buildEnv.APPLE_API_ISSUER;
+    delete buildEnv.APPLE_ID;
+    delete buildEnv.APPLE_APP_SPECIFIC_PASSWORD;
+    delete buildEnv.APPLE_ID_PASSWORD;
+    delete buildEnv.APPLE_TEAM_ID;
+    delete buildEnv.APPLE_KEYCHAIN;
+    delete buildEnv.APPLE_KEYCHAIN_PROFILE;
+  } else if (options.platform === "mac") {
+    if (options.skipNotarization) {
+      yield* Effect.logWarning(
+        "[desktop-artifact] Notarization skipped by request; this build is signed but not notarized and must not be published.",
+      );
+      delete buildEnv.APPLE_API_KEY;
+      delete buildEnv.APPLE_API_KEY_ID;
+      delete buildEnv.APPLE_API_ISSUER;
+      delete buildEnv.APPLE_ID;
+      delete buildEnv.APPLE_APP_SPECIFIC_PASSWORD;
+      delete buildEnv.APPLE_ID_PASSWORD;
+      delete buildEnv.APPLE_TEAM_ID;
+      delete buildEnv.APPLE_KEYCHAIN;
+      delete buildEnv.APPLE_KEYCHAIN_PROFILE;
+    } else {
+      const notarization = resolveMacNotarizationCredentials(buildEnv);
+      if (isMissingMacNotarizationCredentials(notarization)) {
+        return yield* new MacNotarizationCredentialsMissingError({
+          missing: notarization.missing,
+          requirements: describeMacNotarizationRequirements(),
+        });
+      }
+      // electron-builder probes credential families in a fixed order and
+      // throws when it sees a partial one. Remove the families we are not
+      // using so a leftover CI secret cannot override the detected method.
+      if (notarization.method !== "api-key") {
+        delete buildEnv.APPLE_API_KEY;
+        delete buildEnv.APPLE_API_KEY_ID;
+        delete buildEnv.APPLE_API_ISSUER;
+      }
+      if (notarization.method !== "apple-id") {
+        delete buildEnv.APPLE_ID;
+        delete buildEnv.APPLE_APP_SPECIFIC_PASSWORD;
+        delete buildEnv.APPLE_ID_PASSWORD;
+      }
+      if (notarization.method !== "keychain-profile") {
+        delete buildEnv.APPLE_KEYCHAIN;
+        delete buildEnv.APPLE_KEYCHAIN_PROFILE;
+      }
+      yield* Effect.log(
+        `[desktop-artifact] Notarization credentials found (${notarization.method}).`,
+      );
+    }
   }
 
   if (hostPlatform === "win32") {
@@ -2136,6 +2357,18 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   signed: Flag.boolean("signed").pipe(
     Flag.withDescription(
       "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: T3CODE_DESKTOP_SIGNED).",
+    ),
+    Flag.optional,
+  ),
+  skipNotarization: Flag.boolean("skip-notarization").pipe(
+    Flag.withDescription(
+      "Sign the macOS app but do not require Apple notarization credentials (env: T3CODE_DESKTOP_SKIP_NOTARIZATION). Never use for a distributed release.",
+    ),
+    Flag.optional,
+  ),
+  allowMissingLlamaRuntime: Flag.boolean("allow-missing-llama-runtime").pipe(
+    Flag.withDescription(
+      "Package without the target Axle Offline llama.cpp runtime; only for previews that do not ship offline models (env: T3CODE_DESKTOP_ALLOW_MISSING_LLAMA_RUNTIME).",
     ),
     Flag.optional,
   ),

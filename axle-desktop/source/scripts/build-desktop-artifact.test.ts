@@ -601,8 +601,36 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       const mac = config.mac as Record<string, unknown>;
       assert.equal(config.appId, "com.axle.desktop");
       assert.equal(mac.entitlements, "/tmp/entitlements.mac.plist");
+      assert.equal(mac.entitlementsInherit, "/tmp/entitlements.mac.plist");
       assert.equal(mac.provisioningProfile, "/tmp/t3code.provisionprofile");
+      assert.equal(mac.hardenedRuntime, true);
+      assert.equal(mac.gatekeeperAssess, false);
+      assert.equal(mac.forceCodeSigning, true);
+      assert.equal(mac.notarize, true);
       assert.deepStrictEqual(mac.protocols, [{ name: "Axle", schemes: ["axle", "axle-dev"] }]);
+    }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),
+  );
+
+  it.effect("uses the shared hardened-runtime entitlements for non-passkey macOS builds", () =>
+    Effect.gen(function* () {
+      const config = yield* createBuildConfig(
+        "mac",
+        "dmg",
+        "arm64",
+        "1.2.3",
+        false,
+        false,
+        undefined,
+        undefined,
+      );
+
+      const mac = config.mac as Record<string, unknown>;
+      assert.equal(mac.entitlements, "apps/desktop/resources/entitlements.mac.plist");
+      assert.equal(mac.entitlementsInherit, "apps/desktop/resources/entitlements.mac.plist");
+      assert.equal(mac.hardenedRuntime, true);
+      assert.equal(mac.forceCodeSigning, false);
+      assert.equal(mac.notarize, false);
+      assert.notProperty(mac, "provisioningProfile");
     }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),
   );
 
@@ -718,6 +746,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         skipBuild: Option.none(),
         keepStage: Option.none(),
         signed: Option.none(),
+        skipNotarization: Option.none(),
+        allowMissingLlamaRuntime: Option.none(),
         verbose: Option.none(),
         mockUpdates: Option.none(),
         mockUpdateServerPort: Option.none(),
@@ -756,6 +786,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         skipBuild: Option.some(false),
         keepStage: Option.some(false),
         signed: Option.some(false),
+        skipNotarization: Option.none(),
+        allowMissingLlamaRuntime: Option.none(),
         verbose: Option.some(false),
         mockUpdates: Option.some(false),
         mockUpdateServerPort: Option.none(),

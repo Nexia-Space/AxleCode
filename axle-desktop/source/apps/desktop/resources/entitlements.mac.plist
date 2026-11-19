@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!--
+      Electron needs a JIT and writable executable memory for V8. Without
+      these two entitlements a hardened-runtime build crashes on launch.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!--
+      Axle loads native binaries that are not signed with the same Team ID:
+      the Rust axle runtime, node-pty/fff prebuilds, and the llama.cpp
+      runtime. Library validation must be disabled or those loads fail.
+    -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>
