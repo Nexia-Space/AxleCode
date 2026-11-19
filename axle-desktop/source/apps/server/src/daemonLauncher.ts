@@ -39,11 +39,14 @@ export interface DaemonLauncherCommand {
 }
 
 export class DaemonLauncherUnstableError extends Error {
-  constructor(readonly attemptedPath: string) {
+  readonly attemptedPath: string;
+
+  constructor(attemptedPath: string) {
     super(
       `Refusing to install a daemon service that starts ${attemptedPath}: that path is a per-launch AppImage mount and will not exist on the next boot. Set APPIMAGE to the AppImage's own path, or install the daemon from the axle CLI instead.`,
     );
     this.name = "DaemonLauncherUnstableError";
+    this.attemptedPath = attemptedPath;
   }
 }
 
