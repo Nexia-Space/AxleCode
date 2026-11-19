@@ -1,3 +1,4 @@
+// @effect-diagnostics nodeBuiltinImport:off - runs before the Effect runtime exists
 import * as NodeChildProcess from "node:child_process";
 import * as NodePath from "node:path";
 

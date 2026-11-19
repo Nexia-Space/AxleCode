@@ -1,4 +1,4 @@
-// @effect-diagnostics nodeBuiltinImport:off preferSchemaOverJson:off
+// @effect-diagnostics nodeBuiltinImport:off preferSchemaOverJson:off globalTimers:off
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { Command, Flag } from "effect/unstable/cli";
@@ -13,12 +13,16 @@ import { runServerCommand } from "./cli/server.ts";
 import { sharedServerCommandFlags, type CliServerFlags } from "./cli/config.ts";
 import {
   daemonLauncherEnvironmentFromProcess,
+  installedCommandFromLaunchdPlist,
+  installedCommandFromSystemdUnit,
   resolveDaemonLauncher,
   type DaemonLauncherCommand,
 } from "./daemonLauncher.ts";
+import { initialSelfRetireState, nextSelfRetireState } from "./daemonSelfRetire.ts";
 
 const SERVICE_NAME = "com.axle.desktop-daemon";
 const LINUX_SERVICE_NAME = "axle-daemon.service";
+const WINDOWS_TASK_NAME = "Axle Desktop Daemon";
 const DEFAULT_DAEMON_BASE_DIR = NodePath.join(NodeOs.homedir(), ".axle-desktop");
 
 const daemonHostFlag = Flag.string("host").pipe(
@@ -181,7 +185,7 @@ WantedBy=default.target
 };
 
 const installWindowsService = (flags: DaemonServiceFlags): string => {
-  const taskName = "Axle Desktop Daemon";
+  const taskName = WINDOWS_TASK_NAME;
   const taskCommand = daemonInvocationString(flags);
   runCommand("schtasks.exe", [
     "/Create",
@@ -224,8 +228,8 @@ const uninstallService = (): void => {
     return;
   }
   if (process.platform === "win32") {
-    runCommand("schtasks.exe", ["/End", "/TN", "Axle Desktop Daemon"]);
-    runCommand("schtasks.exe", ["/Delete", "/TN", "Axle Desktop Daemon", "/F"]);
+    runCommand("schtasks.exe", ["/End", "/TN", WINDOWS_TASK_NAME]);
+    runCommand("schtasks.exe", ["/Delete", "/TN", WINDOWS_TASK_NAME, "/F"]);
     return;
   }
   runCommand("systemctl", ["--user", "disable", "--now", LINUX_SERVICE_NAME]);
@@ -237,6 +241,170 @@ const uninstallService = (): void => {
   );
   NodeFs.rmSync(servicePath, { force: true });
   runCommand("systemctl", ["--user", "daemon-reload"]);
+};
+
+/** Where this platform records the user service, or null on Windows (a task name). */
+const serviceFilePath = (): string | null => {
+  if (process.platform === "darwin") {
+    return NodePath.join(NodeOs.homedir(), "Library", "LaunchAgents", `${SERVICE_NAME}.plist`);
+  }
+  if (process.platform === "win32") {
+    return null;
+  }
+  return NodePath.join(
+    process.env.XDG_CONFIG_HOME ?? NodePath.join(NodeOs.homedir(), ".config"),
+    "systemd",
+    "user",
+    LINUX_SERVICE_NAME,
+  );
+};
+
+type DaemonServiceHealth =
+  | { readonly _tag: "absent" }
+  | { readonly _tag: "healthy"; readonly command: string }
+  /** The unit is correct but switched off, so nothing is actually serving. */
+  | { readonly _tag: "stopped"; readonly command: string }
+  /** Installed, but the app it starts is gone — an upgrade moved it, or it was deleted. */
+  | { readonly _tag: "stale"; readonly command: string | null };
+
+const commandSucceeds = (command: string, args: ReadonlyArray<string>): boolean => {
+  try {
+    return NodeChildProcess.spawnSync(command, args, { stdio: "ignore" }).status === 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Whether the service manager will actually keep the daemon running.
+ *
+ * A unit file on disk proves nothing: it can be present but disabled or
+ * stopped, which is indistinguishable from uninstalled as far as the user's
+ * phone is concerned.
+ */
+const serviceIsLive = (): boolean => {
+  if (process.platform === "darwin") {
+    const domain = `gui/${process.getuid?.() ?? ""}`;
+    return commandSucceeds("launchctl", ["print", `${domain}/${SERVICE_NAME}`]);
+  }
+  if (process.platform === "win32") {
+    return commandSucceeds("schtasks.exe", ["/Query", "/TN", WINDOWS_TASK_NAME]);
+  }
+  return (
+    commandSucceeds("systemctl", ["--user", "is-active", "--quiet", LINUX_SERVICE_NAME]) &&
+    commandSucceeds("systemctl", ["--user", "is-enabled", "--quiet", LINUX_SERVICE_NAME])
+  );
+};
+
+/** Enable and start an existing unit without rewriting it. */
+const startExistingService = (): void => {
+  if (process.platform === "darwin") {
+    const path = serviceFilePath();
+    const domain = `gui/${process.getuid?.() ?? ""}`;
+    if (path !== null) runCommand("launchctl", ["bootstrap", domain, path]);
+    runCommand("launchctl", ["enable", `${domain}/${SERVICE_NAME}`]);
+    return;
+  }
+  if (process.platform === "win32") {
+    runCommand("schtasks.exe", ["/Run", "/TN", WINDOWS_TASK_NAME]);
+    return;
+  }
+  runCommand("systemctl", ["--user", "enable", "--now", LINUX_SERVICE_NAME]);
+};
+
+/**
+ * Whether an installed service still points at an app that exists.
+ *
+ * A unit naming a missing executable is the signature of an app that was
+ * deleted or replaced. systemd keeps retrying it until the start limit, so it
+ * never serves anything; the useful response is to clear it out rather than
+ * leave litter behind in the user's login services.
+ */
+const inspectDaemonService = (): DaemonServiceHealth => {
+  const path = serviceFilePath();
+  // Windows exposes no readable unit, so trust the scheduled task and leave it.
+  if (path === null) return { _tag: "absent" };
+  let contents: string;
+  try {
+    contents = NodeFs.readFileSync(path, "utf8");
+  } catch {
+    return { _tag: "absent" };
+  }
+  const command =
+    process.platform === "darwin"
+      ? installedCommandFromLaunchdPlist(contents)
+      : installedCommandFromSystemdUnit(contents);
+  if (command === null) return { _tag: "stale", command: null };
+  if (!NodeFs.existsSync(command)) return { _tag: "stale", command };
+  return serviceIsLive() ? { _tag: "healthy", command } : { _tag: "stopped", command };
+};
+
+export type DaemonEnsureOutcome =
+  | { readonly _tag: "installed"; readonly service: string }
+  | { readonly _tag: "repaired"; readonly service: string; readonly previousCommand: string | null }
+  | { readonly _tag: "started"; readonly command: string }
+  | { readonly _tag: "unchanged"; readonly command: string };
+
+/**
+ * Install the service when it is missing or broken, and otherwise leave it
+ * exactly as it is.
+ *
+ * Deliberately not idempotent-by-rewrite: a unit the user installed by hand may
+ * carry flags the app knows nothing about (a `--host`, a custom `--base-dir`),
+ * and rewriting it on every launch would silently discard them.
+ */
+export const ensureDaemonService = (flags: DaemonServiceFlags): DaemonEnsureOutcome => {
+  const health = inspectDaemonService();
+  if (health._tag === "healthy") {
+    return { _tag: "unchanged", command: health.command };
+  }
+  // Switch it back on, but keep the unit as-is: it may carry flags this call
+  // knows nothing about, such as a --host the user chose.
+  if (health._tag === "stopped") {
+    startExistingService();
+    return { _tag: "started", command: health.command };
+  }
+  if (health._tag === "stale") {
+    uninstallService();
+    return {
+      _tag: "repaired",
+      service: installService(flags),
+      previousCommand: health.command,
+    };
+  }
+  return { _tag: "installed", service: installService(flags) };
+};
+
+const SELF_RETIRE_CHECK_INTERVAL_MS = 5 * 60 * 1_000;
+
+/**
+ * Remove our own login service once the app that owns it is gone.
+ *
+ * Deleting an AppImage or a .app runs no uninstall hook, so this is the only
+ * opportunity to clean up. The timer is unref'd: it must never be the reason
+ * the process stays alive.
+ */
+const watchForUninstalledApp = (): void => {
+  let state = initialSelfRetireState;
+  const timer = setInterval(() => {
+    const health = inspectDaemonService();
+    // "absent" means someone already removed the unit; nothing left to retire.
+    if (health._tag === "absent") return;
+    const appPresent = health._tag !== "stale";
+    const decision = nextSelfRetireState(state, appPresent);
+    state = decision.state;
+    if (!decision.retire) return;
+    process.stderr.write(
+      "Axle daemon: the app that installed this service no longer exists. Removing the service and exiting.\n",
+    );
+    try {
+      uninstallService();
+    } finally {
+      clearInterval(timer);
+      process.exit(0);
+    }
+  }, SELF_RETIRE_CHECK_INTERVAL_MS);
+  timer.unref?.();
 };
 
 const daemonRunFlags = {
@@ -252,6 +420,7 @@ const daemonRunCommand = Command.make("run", daemonRunFlags).pipe(
         process.env.T3CODE_HOME = DEFAULT_DAEMON_BASE_DIR;
       }
       process.env.AXLE_DESKTOP_BOOTSTRAP_TOKEN = ensureDesktopBootstrapToken(flags);
+      watchForUninstalledApp();
     }).pipe(
       Effect.andThen(
         runServerCommand(flags, {
@@ -268,6 +437,33 @@ const daemonInstallCommand = Command.make("install", daemonServiceFlags).pipe(
   Command.withHandler((flags) =>
     Effect.sync(() => {
       process.stdout.write(`Installed Axle daemon: ${installService(flags)}\n`);
+    }),
+  ),
+);
+
+const daemonEnsureCommand = Command.make("ensure", daemonServiceFlags).pipe(
+  Command.withDescription(
+    "Install the Axle daemon only if it is missing or points at an app that no longer exists.",
+  ),
+  Command.withHandler((flags) =>
+    Effect.sync(() => {
+      const outcome = ensureDaemonService(flags);
+      switch (outcome._tag) {
+        case "installed":
+          process.stdout.write(`Installed Axle daemon: ${outcome.service}\n`);
+          return;
+        case "repaired":
+          process.stdout.write(
+            `Reinstalled Axle daemon (previous entry ${outcome.previousCommand ?? "unreadable"} is gone): ${outcome.service}\n`,
+          );
+          return;
+        case "started":
+          process.stdout.write(`Started the existing Axle daemon: ${outcome.command}\n`);
+          return;
+        case "unchanged":
+          process.stdout.write(`Axle daemon already running: ${outcome.command}\n`);
+          return;
+      }
     }),
   ),
 );
@@ -320,6 +516,7 @@ export const daemonCommand = Command.make("daemon").pipe(
   Command.withSubcommands([
     daemonRunCommand,
     daemonInstallCommand,
+    daemonEnsureCommand,
     daemonUninstallCommand,
     daemonStatusCommand,
   ]),

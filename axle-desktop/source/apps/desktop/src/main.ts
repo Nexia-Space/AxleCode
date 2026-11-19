@@ -15,6 +15,7 @@ import type { RemoteT3RunnerOptions } from "@axle/ssh/tunnel";
 import serverPackageJson from "../../server/package.json" with { type: "json" };
 
 import { isDaemonMode, runDaemon } from "./daemonMode.ts";
+import { ensureDaemonService } from "./ensureDaemonService.ts";
 import * as DesktopIpc from "./ipc/DesktopIpc.ts";
 import * as ElectronApp from "./electron/ElectronApp.ts";
 import * as ElectronDialog from "./electron/ElectronDialog.ts";
@@ -206,5 +207,9 @@ const desktopRuntimeLayer = desktopApplicationLayer.pipe(
 // Daemon mode already owns this process; starting the windowed app here would
 // defeat the point and take the instance lock.
 if (!isDaemonMode()) {
+  // Register the background service so closing the window stops taking the
+  // backend down with it. Best-effort and not awaited: the window must open
+  // even where login services are unavailable.
+  void ensureDaemonService({ dirname: __dirname });
   DesktopApp.program.pipe(Effect.provide(desktopRuntimeLayer), NodeRuntime.runMain);
 }
