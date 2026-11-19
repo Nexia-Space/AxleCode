@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   isMissingMacNotarizationCredentials,
@@ -27,9 +27,9 @@ describe("resolveMacNotarizationCredentials", () => {
   });
 
   it("accepts a notarytool keychain profile", () => {
-    expect(
-      resolveMacNotarizationCredentials({ APPLE_KEYCHAIN_PROFILE: "axle-notary" }),
-    ).toEqual({ method: "keychain-profile" });
+    expect(resolveMacNotarizationCredentials({ APPLE_KEYCHAIN_PROFILE: "axle-notary" })).toEqual({
+      method: "keychain-profile",
+    });
   });
 
   it("reports the missing API key variables instead of silently skipping", () => {
@@ -48,11 +48,7 @@ describe("resolveMacNotarizationCredentials", () => {
 
     expect(isMissingMacNotarizationCredentials(resolution)).toBe(true);
     if (isMissingMacNotarizationCredentials(resolution)) {
-      expect(resolution.missing).toEqual([
-        "APPLE_API_KEY",
-        "APPLE_API_KEY_ID",
-        "APPLE_API_ISSUER",
-      ]);
+      expect(resolution.missing).toEqual(["APPLE_API_KEY", "APPLE_API_KEY_ID", "APPLE_API_ISSUER"]);
     }
   });
 });

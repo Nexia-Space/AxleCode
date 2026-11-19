@@ -1,7 +1,7 @@
 import * as NodeFSP from "node:fs/promises";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import {
   auditBundleSymlinks,
@@ -135,8 +135,8 @@ describe("copyStagedResources", () => {
 
     await copyStagedResources({ source, destination, preserveSymlinks: true });
 
-    expect(
-      await NodeFSP.readlink(NodePath.join(destination, "lib", "libggml.so")),
-    ).toBe("libggml.so.0.0.0");
+    expect(await NodeFSP.readlink(NodePath.join(destination, "lib", "libggml.so"))).toBe(
+      "libggml.so.0.0.0",
+    );
   });
 });
