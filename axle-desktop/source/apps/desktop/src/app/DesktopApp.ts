@@ -14,6 +14,7 @@ import { ensureGitHubCliInstalled } from "../ipc/methods/githubCli.ts";
 import * as DesktopAppIdentity from "./DesktopAppIdentity.ts";
 import * as DesktopApplicationMenu from "../window/DesktopApplicationMenu.ts";
 import * as DesktopWindow from "../window/DesktopWindow.ts";
+import * as DesktopBackendConfiguration from "../backend/DesktopBackendConfiguration.ts";
 import * as DesktopBackendPool from "../backend/DesktopBackendPool.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import * as DesktopLifecycle from "./DesktopLifecycle.ts";
@@ -144,6 +145,7 @@ const bootstrap = Effect.gen(function* () {
   const environment = yield* DesktopEnvironment.DesktopEnvironment;
   const desktopSettings = yield* DesktopAppSettings.DesktopAppSettings;
   const serverExposure = yield* DesktopServerExposure.DesktopServerExposure;
+  const backendConfiguration = yield* DesktopBackendConfiguration.DesktopBackendConfiguration;
   const wslBackend = yield* DesktopWslBackend.DesktopWslBackend;
   const desktopWindow = yield* DesktopWindow.DesktopWindow;
   yield* logBootstrapInfo("bootstrap start");
@@ -152,8 +154,20 @@ const bootstrap = Effect.gen(function* () {
     return yield* new DesktopDevelopmentBackendPortRequiredError();
   }
 
-  const backendPortSelection = yield* resolveDesktopBackendPort(environment.configuredBackendPort);
+  // An attached daemon already owns a port and already serves the client this
+  // window has to load, so it decides the backend origin. Scanning for a free
+  // port here instead would skip the daemon's port precisely because it is in
+  // use, point the renderer somewhere nothing is listening, and produce a
+  // blank window with no error anywhere - the backend is healthy, just not
+  // where the window was told to look.
+  const attachedDaemon = yield* backendConfiguration.resolveDaemon;
+  const backendPortSelection = Option.isSome(attachedDaemon)
+    ? ({ port: attachedDaemon.value.bootstrap.port, selectedByScan: false } as const)
+    : yield* resolveDesktopBackendPort(environment.configuredBackendPort);
   const backendPort = backendPortSelection.port;
+  if (Option.isSome(attachedDaemon)) {
+    yield* logBootstrapInfo("using the attached daemon's port", { port: backendPort });
+  }
   yield* logBootstrapInfo(
     backendPortSelection.selectedByScan
       ? "selected backend port via sequential scan"
