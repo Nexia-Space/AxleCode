@@ -4,12 +4,13 @@
  *
  * Usage:
  *   node scripts/validate-macos-release.ts release/Axle-arm64.dmg --arch arm64
- *   node scripts/validate-macos-release.ts /Applications/Axle.app --allow-unsigned
+ *   node scripts/validate-macos-release.ts /Applications/Axle.app --allow-adhoc
  *
  * Strict mode (the default) requires a Developer ID signature, hardened
  * runtime, a stapled notarization ticket, and a passing Gatekeeper assessment.
- * `--allow-unsigned` is for local preview builds only; it still checks bundle
- * structure, architecture, llama.cpp resources, and DMG integrity.
+ * `--allow-adhoc` is for preview builds only; it still requires a valid
+ * signature seal and checks bundle structure, architecture, llama.cpp
+ * resources, and DMG integrity.
  */
 import * as NodeChildProcess from "node:child_process";
 import * as NodeCrypto from "node:crypto";
@@ -25,7 +26,7 @@ interface Options {
   readonly arch: Arch;
   readonly bundleId: string;
   readonly expectedVersion: string | undefined;
-  readonly allowUnsigned: boolean;
+  readonly allowAdHoc: boolean;
   readonly json: boolean;
 }
 
@@ -47,7 +48,7 @@ function printUsage(): never {
       "  --arch <arm64|x64|universal>  Expected architecture (inferred from the file name when omitted).",
       "  --bundle-id <id>              Expected CFBundleIdentifier (default: com.axle.desktop).",
       "  --version <version>           Expected CFBundleShortVersionString and CFBundleVersion.",
-      "  --allow-unsigned              Preview mode: skip signature, Gatekeeper, and notarization checks.",
+      "  --allow-adhoc                 Preview mode: allow an ad-hoc signed build, but still require valid signature seals; skip Developer ID, Gatekeeper, and notarization checks. --allow-unsigned is accepted as an alias.",
       "  --json                        Print the report as JSON.",
     ].join("\n") + "\n",
   );
@@ -59,7 +60,7 @@ function parseArgs(argv: ReadonlyArray<string>): Options {
   let arch: Arch | undefined;
   let bundleId = DEFAULT_BUNDLE_ID;
   let expectedVersion: string | undefined;
-  let allowUnsigned = false;
+  let allowAdHoc = false;
   let json = false;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -75,8 +76,8 @@ function parseArgs(argv: ReadonlyArray<string>): Options {
       bundleId = argv[++index] ?? bundleId;
     } else if (argument === "--version") {
       expectedVersion = argv[++index];
-    } else if (argument === "--allow-unsigned") {
-      allowUnsigned = true;
+    } else if (argument === "--allow-adhoc" || argument === "--allow-unsigned") {
+      allowAdHoc = true;
     } else if (argument === "--json") {
       json = true;
     } else if (argument === "--help" || argument === "-h") {
@@ -107,7 +108,7 @@ function parseArgs(argv: ReadonlyArray<string>): Options {
     arch: inferredArch,
     bundleId,
     expectedVersion,
-    allowUnsigned,
+    allowAdHoc,
     json,
   };
 }
@@ -411,34 +412,52 @@ async function main(): Promise<void> {
         .join("; ") || "no dangling or absolute symlinks",
     );
 
-    if (options.allowUnsigned) {
-      record("Code signature", true, "skipped (--allow-unsigned)", true);
-      record("Hardened runtime", true, "skipped (--allow-unsigned)", true);
-      record("Gatekeeper assessment", true, "skipped (--allow-unsigned)", true);
-      record("Notarization ticket", true, "skipped (--allow-unsigned)", true);
-    } else {
-      const verify = run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath]);
-      record(
-        "Code signature",
-        verify.status === 0,
-        verify.status === 0
-          ? "codesign --verify --deep --strict passed"
-          : (verify.stderr || verify.stdout).trim(),
-      );
+    // The signature seals are always checked, including preview builds. The
+    // 1.1.53 "damaged" bundle would have failed here even though it was never
+    // Developer ID signed.
+    const verify = run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath]);
+    record(
+      "Code signature",
+      verify.status === 0,
+      verify.status === 0
+        ? "codesign --verify --deep --strict passed"
+        : (verify.stderr || verify.stdout).trim(),
+    );
 
-      const signature = run("codesign", ["-dv", "--verbose=4", appPath]);
-      const signatureText = `${signature.stdout}\n${signature.stderr}`;
-      const authorities = [...signatureText.matchAll(/^Authority=(.+)$/gmu)].flatMap((match) => {
-        const authority = match[1]?.trim();
-        return authority === undefined ? [] : [authority];
-      });
-      const team = /^TeamIdentifier=(.+)$/mu.exec(signatureText)?.[1]?.trim();
-      const flags = /^flags=([^\n]+)$/mu.exec(signatureText)?.[1] ?? "";
-      const identifier = /^Identifier=(.+)$/mu.exec(signatureText)?.[1]?.trim();
-      const isDeveloperId = authorities.some((authority) =>
-        authority.startsWith("Developer ID Application"),
+    const signature = run("codesign", ["-dv", "--verbose=4", appPath]);
+    const signatureText = `${signature.stdout}\n${signature.stderr}`;
+    const authorities = [...signatureText.matchAll(/^Authority=(.+)$/gmu)].flatMap((match) => {
+      const authority = match[1]?.trim();
+      return authority === undefined ? [] : [authority];
+    });
+    const team = /^TeamIdentifier=(.+)$/mu.exec(signatureText)?.[1]?.trim();
+    // codesign prints the flags on the CodeDirectory line, not as a separate
+    // `flags=` line: `CodeDirectory ... flags=0x10002(adhoc,runtime) ...`.
+    const flags = /\bflags=(\S+)/u.exec(signatureText)?.[1] ?? "";
+    const identifier = /^Identifier=(.+)$/mu.exec(signatureText)?.[1]?.trim();
+    const isDeveloperId = authorities.some((authority) =>
+      authority.startsWith("Developer ID Application"),
+    );
+    const hardenedRuntime = flags.includes("runtime");
+    record(
+      "Signing identifier",
+      identifier === options.bundleId,
+      `Identifier=${identifier ?? "missing"}`,
+    );
+
+    if (options.allowAdHoc) {
+      record(
+        "Developer ID signature",
+        true,
+        isDeveloperId
+          ? `Authority=${authorities[0]}, TeamIdentifier=${team ?? "missing"}`
+          : `skipped (--allow-adhoc); ad-hoc flags=${flags.trim() || "none"}`,
+        !isDeveloperId,
       );
-      const hardenedRuntime = flags.includes("runtime");
+      record("Hardened runtime", true, "skipped (--allow-adhoc)", true);
+      record("Gatekeeper assessment", true, "skipped (--allow-adhoc)", true);
+      record("Notarization ticket", true, "skipped (--allow-adhoc)", true);
+    } else {
       record(
         "Developer ID signature",
         isDeveloperId && team !== undefined && team !== "not set",
@@ -451,17 +470,12 @@ async function main(): Promise<void> {
         hardenedRuntime,
         `codesign flags: ${flags.trim() || "none"}`,
       );
-      record(
-        "Signing identifier",
-        identifier === options.bundleId,
-        `Identifier=${identifier ?? "missing"}`,
-      );
 
       const spctl = run("spctl", ["--assess", "--type", "execute", "-vv", appPath]);
       record(
         "Gatekeeper assessment",
         spctl.status === 0,
-        spctl.status === 0 ? (spctl.stderr || spctl.stdout).trim() : (spctl.stderr || spctl.stdout).trim(),
+        (spctl.stderr || spctl.stdout).trim(),
       );
 
       const staple = run("xcrun", ["stapler", "validate", appPath]);

@@ -607,11 +607,12 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.equal(mac.gatekeeperAssess, false);
       assert.equal(mac.forceCodeSigning, true);
       assert.equal(mac.notarize, true);
+      assert.notProperty(mac, "identity");
       assert.deepStrictEqual(mac.protocols, [{ name: "Axle", schemes: ["axle", "axle-dev"] }]);
     }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),
   );
 
-  it.effect("uses the shared hardened-runtime entitlements for non-passkey macOS builds", () =>
+  it.effect("ad-hoc signs unsigned macOS builds with the shared hardened-runtime entitlements", () =>
     Effect.gen(function* () {
       const config = yield* createBuildConfig(
         "mac",
@@ -628,7 +629,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.equal(mac.entitlements, "apps/desktop/resources/entitlements.mac.plist");
       assert.equal(mac.entitlementsInherit, "apps/desktop/resources/entitlements.mac.plist");
       assert.equal(mac.hardenedRuntime, true);
-      assert.equal(mac.forceCodeSigning, false);
+      assert.equal(mac.forceCodeSigning, true);
+      assert.equal(mac.identity, "-");
       assert.equal(mac.notarize, false);
       assert.notProperty(mac, "provisioningProfile");
     }).pipe(Effect.provide(ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })))),

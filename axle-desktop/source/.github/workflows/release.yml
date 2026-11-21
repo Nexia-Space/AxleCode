@@ -635,7 +635,7 @@ jobs:
               echo "::error::A tagged macOS release must be signed and notarized." >&2
               exit 1
             fi
-            args+=(--allow-unsigned)
+            args+=(--allow-adhoc)
           fi
           node scripts/validate-macos-release.ts "${args[@]}"
 

@@ -1592,10 +1592,15 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       target: target === "dmg" ? [target, "zip"] : [target],
       icon: "icon.icns",
       category: "public.app-category.developer-tools",
-      // Signing is opt-in through --signed. Once enabled, a missing Developer
-      // ID identity must fail the build instead of silently producing the
-      // broken unsigned bundle that shipped as 1.1.53.
-      forceCodeSigning: signed,
+      // A mac app must always carry a valid, sealed signature. Without a
+      // Developer ID, electron-builder would otherwise leave Electron's
+      // linker-signed executable in place and macOS reports the bundle as
+      // damaged ("code has no resources but signature indicates they must be
+      // present"), which is what shipped in 1.1.53. --signed asks for a real
+      // Developer ID; otherwise sign ad-hoc so preview builds can at least be
+      // opened with right-click > Open.
+      forceCodeSigning: true,
+      ...(signed ? {} : { identity: "-" }),
       hardenedRuntime: true,
       gatekeeperAssess: false,
       entitlements: entitlementsPath,

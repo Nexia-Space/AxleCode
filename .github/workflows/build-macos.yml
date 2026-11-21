@@ -87,13 +87,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # An unsigned macOS build ships with a Gatekeeper warning rather than
-          # not shipping at all, which is how every release up to v1.1.54 went
-          # out. Warn so the gap stays visible, but never block: the signing and
-          # notarization steps below are already conditional on these same
-          # secrets and switch themselves on once the secrets exist.
+          # Without Apple material the build is ad-hoc signed: macOS no longer
+          # reports it as damaged, but users must still approve the first
+          # launch. Warn so the gap stays visible, but never block: the signing
+          # and notarization steps below switch themselves on once the secrets
+          # exist.
           if [[ -z "${CSC_LINK:-}" || -z "${CSC_KEY_PASSWORD:-}" ]]; then
-            echo "::warning::Building macOS unsigned. Set CSC_LINK and CSC_KEY_PASSWORD (Developer ID Application certificate) to sign."
+            echo "::warning::Building macOS ad-hoc signed. Set CSC_LINK and CSC_KEY_PASSWORD (Developer ID Application certificate) for a notarized build."
           fi
           if [[ -n "${APPLE_API_KEY_CONTENT:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
             exit 0
@@ -190,7 +190,7 @@ jobs:
           set -euo pipefail
           args=(release/Axle-x64.dmg --arch x64)
           if [[ "${T3CODE_DESKTOP_SIGNED}" != "true" ]]; then
-            args+=(--allow-unsigned)
+            args+=(--allow-adhoc)
           fi
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             args+=(--version "${GITHUB_REF_NAME#v}")
@@ -259,13 +259,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # An unsigned macOS build ships with a Gatekeeper warning rather than
-          # not shipping at all, which is how every release up to v1.1.54 went
-          # out. Warn so the gap stays visible, but never block: the signing and
-          # notarization steps below are already conditional on these same
-          # secrets and switch themselves on once the secrets exist.
+          # Without Apple material the build is ad-hoc signed: macOS no longer
+          # reports it as damaged, but users must still approve the first
+          # launch. Warn so the gap stays visible, but never block: the signing
+          # and notarization steps below switch themselves on once the secrets
+          # exist.
           if [[ -z "${CSC_LINK:-}" || -z "${CSC_KEY_PASSWORD:-}" ]]; then
-            echo "::warning::Building macOS unsigned. Set CSC_LINK and CSC_KEY_PASSWORD (Developer ID Application certificate) to sign."
+            echo "::warning::Building macOS ad-hoc signed. Set CSC_LINK and CSC_KEY_PASSWORD (Developer ID Application certificate) for a notarized build."
           fi
           if [[ -n "${APPLE_API_KEY_CONTENT:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
             exit 0
@@ -359,7 +359,7 @@ jobs:
           set -euo pipefail
           args=(release/Axle-arm64.dmg --arch arm64)
           if [[ "${T3CODE_DESKTOP_SIGNED}" != "true" ]]; then
-            args+=(--allow-unsigned)
+            args+=(--allow-adhoc)
           fi
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             args+=(--version "${GITHUB_REF_NAME#v}")
