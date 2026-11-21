@@ -28,6 +28,25 @@ export const isDaemonMode = (): boolean => process.env.AXLE_DAEMON === "1";
  * Nothing here constructs an Electron app, so no window, dock icon, or
  * instance lock is ever created.
  */
+const DEFAULT_DAEMON_ARGS = ["daemon", "run", "--no-browser"] as const;
+
+/**
+ * The daemon arguments the service unit asked for.
+ *
+ * The unit records the whole command, so `--host`, `--port` and `--base-dir`
+ * arrive in argv and have to reach the server. Hardcoding the defaults instead
+ * silently dropped `--host 0.0.0.0`, leaving the daemon bound to loopback and
+ * unreachable from the phone it exists to serve.
+ *
+ * Everything before the `daemon` subcommand belongs to Electron, not us.
+ */
+export function resolveDaemonArgs(argv: ReadonlyArray<string>): ReadonlyArray<string> {
+  const start = argv.indexOf("daemon");
+  if (start < 0) return DEFAULT_DAEMON_ARGS;
+  const forwarded = argv.slice(start);
+  return forwarded.length > 1 ? forwarded : DEFAULT_DAEMON_ARGS;
+}
+
 export function runDaemon(dirname: string): Promise<number> {
   // Mirrors DesktopEnvironment's appRoot: the asar path when packaged, the
   // repository root in development.
@@ -39,7 +58,7 @@ export function runDaemon(dirname: string): Promise<number> {
   return new Promise<number>((resolve) => {
     const child = NodeChildProcess.spawn(
       process.execPath,
-      [serverEntry, "daemon", "run", "--no-browser"],
+      [serverEntry, ...resolveDaemonArgs(process.argv)],
       {
         stdio: "inherit",
         env: {
@@ -57,6 +76,13 @@ export function runDaemon(dirname: string): Promise<number> {
       resolve(1);
     });
     child.once("close", (code, signal) => {
+      // A service manager stops us with SIGTERM, so exiting non-zero for it
+      // reads as a crash: systemd pairs that with Restart=on-failure and
+      // brings the daemon straight back, making `systemctl stop` look broken.
+      if (signal === "SIGTERM" || signal === "SIGINT") {
+        resolve(0);
+        return;
+      }
       resolve(signal !== null ? 1 : (code ?? 0));
     });
     for (const forwarded of ["SIGINT", "SIGTERM"] as const) {
