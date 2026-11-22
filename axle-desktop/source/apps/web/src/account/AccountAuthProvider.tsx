@@ -28,6 +28,7 @@ import {
   clerkAuthOrigin,
   clerkCallbackUrl,
   clerkExternalAuthUrl,
+  clerkProviderAuthUrl,
   exchangeClerkBrowserCode,
   isClerkFrameMessage,
   restoreClerkSession,
@@ -63,8 +64,8 @@ type AccountState =
 
 interface AccountContextValue {
   readonly account: AccountState;
-  /** Opens the system browser at the Axle sign-in page. */
-  readonly signIn: () => void;
+  /** Opens the system browser at the Axle sign-in page, optionally for one provider. */
+  readonly signIn: (providerId?: string) => void;
   /** Clears the local account and best-effort revokes the server session. */
   readonly signOut: () => void;
   /** Connects an extra sign-in provider to the signed-in account. */
@@ -136,7 +137,7 @@ export function AccountAuthProvider({ children }: { readonly children: ReactNode
   const appliedExternalStateRef = useRef<string | null>(null);
   const externalSessionRef = useRef(false);
   const restoringSessionRef = useRef(true);
-  const signInRef = useRef<() => void>(() => undefined);
+  const signInRef = useRef<(providerId?: string) => void>(() => undefined);
   const signOutRef = useRef<() => void>(() => undefined);
   const linkProviderRef = useRef<(providerId: string) => Promise<void>>(async () => undefined);
   const [state, setState] = useState<AccountState>({
@@ -356,20 +357,27 @@ export function AccountAuthProvider({ children }: { readonly children: ReactNode
       });
     };
 
-    const startExternalAuth = () => {
-      const openExternal = window.desktopBridge?.openExternal;
-      if (typeof openExternal !== "function") {
-        setState({
-          status: "error",
-          user: null,
-          session: null,
-          error: "Browser sign-in is only available in Axle Desktop.",
-        });
-        return;
-      }
+    const startExternalAuth = (providerId?: string) => {
       const state = window.crypto.randomUUID();
+      const authUrl =
+        providerId === undefined
+          ? clerkExternalAuthUrl(state)
+          : clerkProviderAuthUrl(state, providerId);
+      const openExternal = window.desktopBridge?.openExternal;
       pendingExternalStateRef.current = state;
-      void openExternal(clerkExternalAuthUrl(state))
+      // Desktop hands the flow to the system browser. Dev and plain browser
+      // builds have no bridge, so they open a tab instead and rely on the claim
+      // poll below, which needs no custom-scheme deep link to come back.
+      // `noopener` makes the return value always null, so the tab reports no
+      // success signal of its own: a blocked popup surfaces as the poll's own
+      // timeout rather than an immediate error.
+      const openInBrowserTab = () => {
+        window.open(authUrl, "_blank", "noopener");
+        return Promise.resolve<boolean | undefined>(undefined);
+      };
+      const opening =
+        typeof openExternal === "function" ? openExternal(authUrl) : openInBrowserTab();
+      void opening
         .then((opened) => {
           if (opened === false) throw new Error("Axle could not open the default browser.");
           void pollExternalSignIn(state, {
@@ -627,7 +635,7 @@ export function AccountAuthProvider({ children }: { readonly children: ReactNode
   const contextValue = useMemo(
     () => ({
       account: state,
-      signIn: () => signInRef.current(),
+      signIn: (providerId?: string) => signInRef.current(providerId),
       signOut: () => signOutRef.current(),
       linkProvider: (providerId: string) => linkProviderRef.current(providerId),
     }),

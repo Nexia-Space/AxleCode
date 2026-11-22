@@ -143,9 +143,18 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
 }
 
 [data-slot="sidebar-wrapper"] {
+  --workspace-rail-width: 52px;
   --workspace-titlebar-content-left: calc(
     var(--workspace-controls-left) + var(--workspace-titlebar-control-size) +
       var(--workspace-titlebar-control-gap)
+  );
+  /* Everything right of the icon rail only has to clear the part of the
+     titlebar controls the rail does not already sit under. On Windows and
+     Linux the rail is exactly as wide as that inset, so the value is 0 there
+     and only macOS traffic lights push content further right. */
+  --workspace-titlebar-content-inset: max(
+    0px,
+    calc(var(--workspace-titlebar-content-left) - var(--workspace-rail-width))
   );
 }
 

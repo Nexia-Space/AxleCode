@@ -16,7 +16,6 @@ import {
   PlusIcon,
   PinIcon,
   SearchIcon,
-  SmartphoneIcon,
   SquarePenIcon,
   TerminalIcon,
   TriangleAlertIcon,
@@ -30,16 +29,12 @@ import {
   ThreadWorktreeIndicator,
 } from "./ThreadStatusIndicators";
 import { AxleLogo } from "./AxleLogo";
-import { SidebarAccountMenu } from "./account/SidebarAccountMenu";
-import { PluginsSidebarEntry } from "./plugins/PluginsSidebarEntry";
 // import { CloudJobsSidebarEntry } from "./cloud/CloudJobsSidebarEntry";
 // import { CloudSchedulesSidebarEntry } from "./cloud/CloudSchedulesSidebarEntry";
-import { PullRequestsSidebarEntry } from "./pullRequests/PullRequestsSidebarEntry";
 import { useAtomValue } from "@effect/atom-react";
 import { autoAnimate } from "@formkit/auto-animate";
 import React, { useCallback, useEffect, memo, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import {
   DndContext,
   type DragCancelEvent,
@@ -133,13 +128,7 @@ import { projectEnvironment } from "../state/projects";
 import { useEnvironmentQuery } from "../state/query";
 import { threadEnvironment, useEnvironmentThread } from "../state/threads";
 import { vcsEnvironment } from "../state/vcs";
-import {
-  useEnvironment,
-  useEnvironments,
-  useEnvironmentHttpBaseUrl,
-  usePrimaryEnvironment,
-  usePrimaryEnvironmentId,
-} from "../state/environments";
+import { useEnvironment, useEnvironments, usePrimaryEnvironmentId } from "../state/environments";
 import {
   buildThreadRouteParams,
   resolveThreadRouteRef,
@@ -250,12 +239,6 @@ import {
 } from "../sidebarProjectGrouping";
 import { SidebarProviderUpdatePill } from "./sidebar/SidebarProviderUpdatePill";
 import { getModelProviderPresentation } from "./chat/providerIconUtils";
-import { MobilePairingDialog } from "./settings/MobilePairingDialog";
-import {
-  pairableAdvertisedEndpoints,
-  pairingUnavailableReason,
-} from "./settings/SettingsPanels.logic";
-import { desktopNetworkAccessStateAtom } from "../state/desktopNetworkAccess";
 const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
   updated_at: "Last user message",
   created_at: "Created at",
@@ -276,44 +259,6 @@ const PROJECT_GROUPING_MODE_LABELS: Record<SidebarProjectGroupingMode, string> =
   separate: "Keep separate",
 };
 
-const SidebarRemoteAccessEntry = memo(function SidebarRemoteAccessEntry() {
-  const [isOpen, setIsOpen] = useState(false);
-  const networkAccess = useAtomValue(desktopNetworkAccessStateAtom);
-  const primaryEnvironment = usePrimaryEnvironment();
-  const primaryHttpBaseUrl = useEnvironmentHttpBaseUrl(primaryEnvironment?.environmentId ?? null);
-  const snapshot = AsyncResult.getOrElse(networkAccess, () => null);
-  const exposure = snapshot?.serverExposureState ?? null;
-  const advertisedEndpoints = snapshot?.advertisedEndpoints ?? [];
-  const pairableEndpoints = useMemo(
-    () => pairableAdvertisedEndpoints(advertisedEndpoints),
-    [advertisedEndpoints],
-  );
-
-  return (
-    <>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          size="sm"
-          className="h-9 gap-2.5 rounded-2xl px-2.5 text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          data-testid="sidebar-remote-access-trigger"
-          aria-label="Connect Axle Mobile"
-          onClick={() => setIsOpen(true)}
-        >
-          <SmartphoneIcon className="size-4 text-muted-foreground" />
-          <span className="flex-1 truncate text-left text-[13px]">Remote access</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-      <MobilePairingDialog
-        open={isOpen}
-        onOpenChange={setIsOpen}
-        endpoints={pairableEndpoints}
-        fallbackEndpointUrl={exposure?.endpointUrl ?? primaryHttpBaseUrl}
-        unavailableReason={pairingUnavailableReason(advertisedEndpoints)}
-        showDownloadPrompt
-      />
-    </>
-  );
-});
 const SIDEBAR_ICON_ACTION_BUTTON_CLASS =
   "inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground active:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none";
 const SIDEBAR_CHATS_KEY = "__axle_chats__";
@@ -2952,7 +2897,7 @@ const SidebarChromeHeader = memo(function SidebarChromeHeader({
   return (
     <SidebarHeader
       className={cn(
-        "@container/sidebar-header relative h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2.5 px-4 py-0 pl-[var(--workspace-titlebar-content-left)]",
+        "@container/sidebar-header relative h-[var(--workspace-topbar-height)] shrink-0 flex-row items-center gap-2.5 px-4 py-0 pl-[max(--spacing(4),var(--workspace-titlebar-content-inset))]",
         isElectron && "drag-region",
       )}
     >
@@ -2994,14 +2939,12 @@ function AxleWordmark() {
   return <span className="truncate text-[17px] font-semibold tracking-tight">Axle</span>;
 }
 
+/** Account and settings moved to the icon rail; only update pills remain. */
 const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   return (
-    <SidebarFooter className="gap-2 px-3 pt-3 pb-4">
+    <SidebarFooter className="gap-2 px-3 pt-3 pb-4 empty:hidden">
       <SidebarProviderUpdatePill />
       <SidebarUpdatePill />
-      <SidebarMenu>
-        <SidebarAccountMenu />
-      </SidebarMenu>
     </SidebarFooter>
   );
 });
@@ -3602,10 +3545,12 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
     <SidebarContent className="gap-0 pb-3" role="navigation" aria-label="Workspace navigation">
       <SidebarGroup className="px-3 pt-2 pb-4">
         <SidebarMenu className="gap-0.5 [&_[data-slot=sidebar-menu-button]]:gap-2.5 [&_[data-slot=sidebar-menu-button]>span]:text-[13px] [&_[data-slot=sidebar-menu-button]>svg]:size-4">
-          <SidebarMenuItem>
+          {/* New chat owns the row; search sits opposite it as an icon rather
+              than taking a second full-width row of its own. */}
+          <SidebarMenuItem className="flex flex-row items-center gap-1">
             <SidebarMenuButton
               size="sm"
-              className="h-9 gap-2.5 px-2.5 rounded-2xl font-medium text-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="h-9 flex-1 gap-2.5 px-2.5 rounded-2xl font-medium text-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               data-testid="sidebar-new-chat-trigger"
               aria-label="Create new chat"
               onClick={handleNewChat}
@@ -3618,30 +3563,28 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
                 </Kbd>
               ) : null}
             </SidebarMenuButton>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <CommandDialogTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-muted-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
+                        data-testid="command-palette-trigger"
+                        aria-label="Search commands, projects, and threads"
+                      />
+                    }
+                  />
+                }
+              >
+                <SearchIcon className="size-4" />
+              </TooltipTrigger>
+              <TooltipPopup side="right">
+                {commandPaletteShortcutLabel ? `Search (${commandPaletteShortcutLabel})` : "Search"}
+              </TooltipPopup>
+            </Tooltip>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <CommandDialogTrigger
-              render={
-                <SidebarMenuButton
-                  size="sm"
-                  className="h-9 gap-2.5 px-2.5 rounded-2xl text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                  data-testid="command-palette-trigger"
-                  aria-label="Search commands, projects, and threads"
-                />
-              }
-            >
-              <SearchIcon className="size-4 text-muted-foreground" />
-              <span className="flex-1 truncate text-left text-[13px]">Search</span>
-              {commandPaletteShortcutLabel ? (
-                <Kbd className="h-auto min-w-0 bg-transparent p-0 text-[11px] font-normal text-muted-foreground/65">
-                  {commandPaletteShortcutLabel}
-                </Kbd>
-              ) : null}
-            </CommandDialogTrigger>
-          </SidebarMenuItem>
-          <PullRequestsSidebarEntry />
-          {/* Cloud jobs and the standalone cloud schedules page are disabled. */}
-          <PluginsSidebarEntry />
           <SidebarMenuItem>
             <SidebarMenuButton
               size="sm"
@@ -3655,7 +3598,7 @@ const SidebarProjectsContent = memo(function SidebarProjectsContent(
               <span className="flex-1 truncate text-left text-[13px]">Schedules</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarRemoteAccessEntry />
+          {/* Pull requests, plugins, and remote access live in the icon rail. */}
         </SidebarMenu>
       </SidebarGroup>
       {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
